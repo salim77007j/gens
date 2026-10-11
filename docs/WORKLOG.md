@@ -173,3 +173,8 @@ Rules:
 - WHAT: Run #29 diagnostics converted into fixes and evidence. (1) The triangle interpolation test now computes the EXPECTED color from the actual pixel-center sample point via barycentric weights -> linear interpolation -> sRGB encode, tolerance 2/255. CI evidence: llvmpipe/Vulkan (Linux) and Apple Paravirtual/Metal (macOS) rendered byte-identical [135,143,185] — the renderer's interpolation+encoding is provably correct and cross-backend deterministic; my old expectation wrongly assumed the pixel center was the triangle centroid. (2) gpu_hello added cx/cy offsets inside an ALREADY centered camera, pushing the hero to ortho x=220 > 160 (outside the window); models now use pure world coordinates and verification maps world->pixels explicitly (px = x + W/2, py = H/2 - y). (3) Positive: Windows DX12 software adapter now stores the background EXACTLY [24,26,33] — the sRGB clear decode fix from P2-8b is confirmed end-to-end.
 - WHY: The GPU gate is doing exactly what it exists for; each red run produced a precise, evidence-backed fix.
 - EVIDENCE: run #29 logs (3 OS); workspace 80 passed/0 failed/6 ignored; clippy clean; this commit.
+
+### [phase2] phase docs + evidence (P2-9)
+- WHAT: PHASE_2_REPORT.md (delivery summary, honest scorecard, 8-issue log with evidence chain, numbers incl. cross-backend determinism), README status/roadmap/build-docs update (GPU example + --ignored tests documented), RISKS reconciliation (R-004 Phase 2 note, R-002 window disclosure), evidence phase2/{ci-runs.txt ledger with exact run URLs, smoke_cpu.png, smoke_gpu.png}.
+- WHY: Phase deliverable - the report must reconcile WORKLOG/DECISIONS/RISKS and let a reader verify every claim from committed evidence.
+- EVIDENCE: docs/evidence/phase2/*; run #31; this commit.

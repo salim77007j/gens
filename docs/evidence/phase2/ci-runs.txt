@@ -1,0 +1,53 @@
+PHASE 2 — CI RUN LEDGER (branch phase2-renderer, all runs 2026-10-11 UTC)
+=========================================================================
+The renderer work drove the CI story: the first GPU-enabled run went red
+and each failure produced a precise, evidence-backed fix. Final green:
+run #31. (Runs #20-#27: the per-sub-item pushes, all green — docs ADRs,
+context, target, camera, pipeline/resources/renderer, texture, example.)
+
+ #   SHA       Result     What it proved / caught
+ --  --------  ---------  ------------------------------------------------
+ 28  2f80aa3   failure    FIRST real-GPU run (P2-8 CI upgrade): adapter
+                          probe + lavapipe install worked; 6 #[ignore]d
+                          GPU tests executed. Caught: unit-sized test
+                          geometry under a 1-unit=1-pixel camera (clear-
+                          color-only frames), and — via the Windows DX12
+                          software adapter — WebGPU's linear clear
+                          semantics on sRGB targets ([24,26,33] stored as
+                          [86,90,101]).
+ 29  a437540   failure    After the P2-8b fixes: depth + textured GPU
+                          tests PASS on llvmpipe AND Apple Metal
+                          (byte-identical [135,143,185] cross-backend —
+                          interpolation + sRGB encode proven). Remaining:
+                          triangle test assumed the pixel center was the
+                          triangle centroid. Windows smoke: clear fix
+                          confirmed EXACT [24,26,33]; new catch: cx/cy
+                          offsets inside an already-centered camera
+                          pushed the hero outside the ortho window.
+ 30  35bbcef   failure    GPU integration green on 3 OS. GPU smoke now:
+                          background quad painted WHITE — default vertex
+                          colors were never tinted.
+ 31  72f0561   SUCCESS    FULL MATRIX GREEN. GPU rendering + GPU tests
+                          on all three operating systems.
+
+RUN #31 DETAILS (final green)
+-----------------------------
+ubuntu-latest : adapter llvmpipe (LLVM 20.1.2, 256 bits) (Software,
+                Vulkan, Mesa 25.2.8) — via mesa-vulkan-drivers (ADR-0011)
+                gpu tests: 6/6 ok; cpu smoke 15353 B; gpu smoke 2084 B;
+                gpu_hello debug binary 174171072 B (gate 350 MiB)
+macos-latest  : adapter Apple Paravirtual device (Integrated, Metal)
+                gpu tests: 6/6 ok; gpu smoke 2090 B
+windows-latest: adapter Microsoft Basic Render Driver (Software, Dx12)
+                gpu smoke 2088 B — Windows rendered for real (better than
+                ADR-0011's best-effort assumption)
+artifacts     : smoke-snapshots (smoke_cpu.png 15353 B, smoke_gpu.png
+                2084 B) — committed under docs/evidence/phase2/
+verification  : smoke_gpu.png border pixel == (24,26,33,255) EXACTLY
+                (background bytes via the fragment path); hero pixel at
+                (220,90) == (188,194,194,255) (bilinear checker sample at
+                the sprite center) — never background, never trail color
+run URLs      : #28 https://github.com/salim77007j/gens/actions/runs/38168850605
+                #29 https://github.com/salim77007j/gens/actions/runs/38170332738
+                #30 https://github.com/salim77007j/gens/actions/runs/38170673803
+                #31 https://github.com/salim77007j/gens/actions/runs/38170942161

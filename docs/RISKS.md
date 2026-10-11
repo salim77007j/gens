@@ -7,9 +7,9 @@ Likelihood and Impact are scored Low / Medium / High. Status is one of `Open`, `
 | ID | Risk | Likelihood | Impact | Mitigation (summary) | Status |
 |---|---|---|---|---|---|
 | R-001 | Push credential leaked or invalid | High | High | Env-only storage, secret-scan gate, rotation guidance, local-commit buffer | Corrected (process error, not credential failure - see detail note) |
-| R-002 | Sandbox environment reset loses local state | Medium | High | Push after every sub-item (once credentials work); re-clone procedure in ROLLBACK_PLAN §4 | Monitoring |
+| R-002 | Sandbox environment reset loses local state | Medium | High | Push after every sub-item; re-clone procedure in ROLLBACK_PLAN §4. Phase 2 note: the session start lost the credential again (env reset) and pushed work accumulated locally until the user re-exported the token mid-phase; window closed with zero loss | Monitoring |
 | R-003 | CI unavailable / quota exhausted | Low | Medium | Public repo = free minutes; local `scripts/verify.sh` mirrors every gate | Monitoring |
-| R-004 | Software rendering (lavapipe) unrepresentative of GPU perf | High | Medium | Report relative + absolute numbers with environment disclosure; 60 FPS criterion measured honestly, not fabricated | Open |
+| R-004 | Software rendering (lavapipe) unrepresentative of GPU perf | High | Medium | Report relative + absolute numbers with environment disclosure; 60 FPS criterion measured honestly, not fabricated. Phase 2 note: CI now renders REAL GPU frames on 3 adapters (llvmpipe/Vulkan, Metal, DX12 WARP-class); perf claims still wait for Phase 8 benchmarks | Open |
 | R-005 | CI runner flakiness (Windows/macOS variance, network hiccups) | Medium | Medium | Retry policy (max 1 retry per job), fail-fast disabled, flaky-gate quarantine documented | Open |
 | R-006 | bevy_ecs upstream breaking changes | Medium | Medium | Pin minor version; facade crate confines churn | Open |
 | R-007 | Scope overrun / phase compression temptation | High | High | Hard phase gates, STOP-after-phase protocol, per-phase success criteria in phase reports | Monitoring |

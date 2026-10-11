@@ -1,13 +1,6 @@
-# Gens
+> **Status: Phase 2 — wgpu Renderer.**
+> Phases 0-1 complete and CI-verified (workspace, core runtime, ECS, math). Phase 2 delivers the offscreen-first wgpu renderer with GPU-rendered screenshots verified on Linux (lavapipe/Vulkan), macOS (Metal), and Windows (DX12 software adapter) — see [`docs/PHASE_2_REPORT.md`](docs/PHASE_2_REPORT.md) and the live status in [`docs/WORKLOG.md`](docs/WORKLOG.md).
 
-**A modern, high-performance, cross-platform game engine — built in Rust.**
-
-Gens aims to deliver the capability surface of Unity, Unreal, and Godot with a lighter, safer, more modern core: a data-oriented ECS, a `wgpu`-based renderer targeting Vulkan / DirectX 12 / Metal / WebGPU, deterministic physics, and a professional visual editor — while staying small enough to actually understand and hack on.
-
-[![CI](https://github.com/salim77007j/gens/actions/workflows/ci.yml/badge.svg)](https://github.com/salim77007j/gens/actions/workflows/ci.yml)
-
-> **Status: Phase 0 — Risk Management & Safe Development.**
-> The repository currently contains process infrastructure, governance documents, and CI gates. Engine code lands in Phase 1. See the [roadmap](#roadmap), [`docs/PHASE_0_REPORT.md`](docs/PHASE_0_REPORT.md), and the live status of this phase in [`docs/WORKLOG.md`](docs/WORKLOG.md).
 
 ## Design Goals
 
@@ -37,15 +30,15 @@ Gens aims to deliver the capability surface of Unity, Unreal, and Godot with a l
 | `gens-editor` | The visual editor (separate executable) |
 | `gens-runtime` | Exported-game runtime shell |
 
-The workspace, dependency graph, and profiles are defined in Phase 1 (see `docs/DECISIONS.md` ADR-0001).
+The workspace, dependency graph, and profiles are defined in Phase 1 (see `docs/DECISIONS.md` ADR-0001). The renderer is **offscreen-first** (ADR-0010): every render goes to an engine-owned target with CPU readback, so the full pipeline runs — and is CI-verified on all three operating systems — without any window system or display server (ADR-0011 documents the per-OS GPU guarantees).
 
 ## Roadmap
 
 | Phase | Scope | Status | Report |
 |---|---|---|---|
 | 0 | Risk management & safe development | **Complete** | [`docs/PHASE_0_REPORT.md`](docs/PHASE_0_REPORT.md) |
-| 1 | Workspace + core runtime + ECS + math | **Complete** | — |
-| 2 | Renderer (2D/3D, wgpu) | Pending | — |
+| 1 | Workspace + core runtime + ECS + math | **Complete** | inline in `docs/WORKLOG.md` (Phase 1 entry) |
+| 2 | Renderer (offscreen-first wgpu, GPU CI) | **Complete** | [`docs/PHASE_2_REPORT.md`](docs/PHASE_2_REPORT.md) |
 | 3 | Physics + audio + input | Pending | — |
 | 4 | Animation + UI + AI | Pending | — |
 | 5 | Scripting + assets + save | Pending | — |
@@ -87,11 +80,20 @@ git clone https://github.com/salim77007j/gens.git
 cd gens
 cargo build --workspace
 cargo test --workspace
+
+# CPU path (no GPU needed): deterministic scene snapshot
 cargo run -p gens-runtime --example hello_world -- --frames 120 --out hello_world.png
+
+# GPU path (needs any Vulkan/DX12/Metal adapter; software like lavapipe works):
+cargo run -p gens-runtime --example gpu_hello -- --frames 120 --out gpu_hello.png
+#   append --allow-no-gpu to skip with an explicit marker instead of failing
+
+# run the GPU integration tests too (requires an adapter):
+cargo test -p gens-renderer -- --ignored
 ```
 
 `scripts/verify.sh` runs the full local gate set (fmt, clippy `-D warnings`, build, tests, size gate, governance checks) — it must pass before every push.
 
 ## License
 
-MIT — see [`LICENSE-MIT`](LICENSE-MIT). Dual MIT | Apache-2.0 licensing is under evaluation for Phase 1 (ADR-0006).
+MIT — see [`LICENSE-MIT`](LICENSE-MIT). Dual MIT | Apache-2.0 licensing decision recorded in ADR-0006.
