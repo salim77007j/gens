@@ -14,6 +14,7 @@
 //! on wgpu directly (ADR-0001), except through explicitly re-exported types.
 
 pub mod context;
+pub mod mesh;
 pub mod target;
 
 pub use context::{AdapterClass, GpuContext};
