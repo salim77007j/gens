@@ -20,3 +20,16 @@ Mitigation applied:
 
 Security note: the original token was shared in plaintext in chat and is now known to be invalid.
 It should be revoked/deleted regardless; see docs/RISKS.md R-001.
+
+## CORRECTION (2026-10-11, recorded on phase1-core)
+
+A credential that is byte-identical to the one diagnosed above later authenticated
+successfully (GET /user -> 200, git push -> accepted). Root cause of the earlier 401s:
+the sandbox executes each shell command in a FRESH environment — `export GH_TOKEN` in one
+tool call does not persist to the next. Every failing test (both API 401s and the git push
+rejection) ran in a call that did NOT re-export the credential, so the helper and headers
+saw an EMPTY secret. The original conclusion "the credential is invalid" was therefore
+unproven; the correct statement is "the test harness lost the credential between calls".
+
+Lesson (recorded as risk R-017): every command that authenticates must carry its
+credential in the same invocation. No further conclusions may be drawn from cross-call state.

@@ -22,16 +22,15 @@ Likelihood and Impact are scored Low / Medium / High. Status is one of `Open`, `
 | R-014 | Headless editor screenshots degrade fidelity (Phase 7) | Medium | Low | Software GL path + egui screenshot capture; document limitations honestly | Open |
 | R-015 | Rust toolchain absent in the current sandbox | High | Medium | Install rustup with pinned stable toolchain before Phase 1 build work; CI installs its own toolchain regardless | Open |
 | R-016 | Design reference misread → editor "copies" instead of "inspires" | Low | Medium | `docs/EDITOR_DESIGN.md` in Phase 7 must document extracted language AND Gens' divergences | Open |
+| R-017 | Non-persistent shell environment between tool calls silently breaks authenticated commands | High | Medium | Every command that authenticates must carry its credential in the SAME invocation; never rely on cross-call state (discovered Phase 0→1, caused the false R-001 diagnosis) | Monitoring |
 
 ## Detail notes for top-severity risks
 
-### R-001 — Push credential leaked or invalid — **Realized**
+### R-001 — Push credential leaked or invalid — **status correction: process error, not credential failure**
 
 The token supplied for this project was shared in plaintext in the chat transcript and was found to be **invalid** at Phase 0 start: `GET /user` returns `401 Bad credentials` under both `Bearer` and `token` schemes, and `git push` returns `remote: Invalid username or token`. Evidence: `docs/evidence/phase0/auth-check.txt`.
 
-Immediate mitigations applied: (1) no credential is written to disk, `.git/config`, or the repository — the credential helper reads `GH_TOKEN` from the process environment at push time; (2) a CI secret-scan gate blocks any commit containing a GitHub token pattern; (3) all Phase 0 work is preserved as granular local commits on `phase0-risk-management`, so a single push completes the phase once a valid credential arrives.
-
-Required user actions: create a fresh token (classic with `repo` scope, or fine-grained with **Contents: Read and write** on this repository only), export it as `GH_TOKEN`, and revoke the exposed/invalid token regardless — it was shared in plaintext and must be treated as burned. Residual risk after fix: none beyond normal token hygiene.
+**Correction (see the addendum in that file and the Phase 0 report §13):** a credential byte-identical to the one diagnosed later authenticated and pushed successfully. The 401s came from the test harness — the sandbox runs each shell command in a fresh environment, and every failing test ran in a call that did not carry the credential (empty secret presented). The original "invalid credential" conclusion was unproven. R-001 is reclassified from *Realized* to *process error, corrected*. The credential-hygiene mitigations (env-only storage, secret-scan gate, granular commits) remain in force regardless.
 
 ### R-002 — Sandbox environment reset loses local state
 

@@ -114,3 +114,9 @@ A ready-made script implementing this sequence lives at `/home/z/my-project/scri
 ## 12. Verdict
 
 Phase 0 delivers everything it can deliver without a working credential: the process, the docs, the gates, the drill, and the evidence trail — with the three remaining exit criteria explicitly blocked and a five-minute, fully documented path to clear them. Per the STOP protocol, no Phase 1 work begins until the push succeeds and this phase is declared complete.
+
+## 13. Correction addendum (2026-10-12, recorded on `phase1-core`)
+
+Phase 0 was later completed on origin: branch pushed, CI green (runs [#1](https://github.com/salim77007j/gens/actions/runs/38162440721) and [#2](https://github.com/salim77007j/gens/actions/runs/38162508120)), `main` bootstrapped from the verified head, tag `pre-phase1-safe` pushed. All three "NOT met" items in §8 cleared.
+
+The §9 blocker diagnosis is also corrected. A credential byte-identical to the one diagnosed as "invalid" later authenticated and pushed successfully. Root cause: the sandbox executes each shell command in a **fresh environment** — an `export` performed in one tool call does not exist in the next. Every failing test (both API 401s and the git rejection) ran in a call that did not carry the credential, so GitHub was handed an empty secret. The honest conclusion is therefore: *the Phase 0 credential was never proven invalid; the test harness lost it between calls*. The §9 narrative above is preserved unedited as the record of what was (wrongly) believed at the time; this section and the addendum in `docs/evidence/phase0/auth-check.txt` supersede it. New risk R-017 captures the operational lesson: authenticated commands must carry their credential in the same invocation, always.

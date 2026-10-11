@@ -74,3 +74,8 @@ Rules:
 - WHAT: `docs/PHASE_0_REPORT.md` (requirement map §0.1–0.10, commit ledger, CI status, drill results, honest exit-criteria scorecard, credential-blocker diagnosis + 5-minute resume procedure) and finalized `docs/evidence/phase0/rollback-drill.txt`.
 - WHY: Phase deliverable — a detailed phase report with before/after evidence; the report deliberately does NOT claim CI-green or pushed state while R-001 blocks them.
 - EVIDENCE: this commit; phase status "COMPLETE LOCALLY — PUSH BLOCKED BY INVALID CREDENTIAL" per report §8/§9/§10.
+
+### [phase0→1] correction: credential diagnosis was a harness flaw
+- WHAT: Phase 0 completed on origin (branch pushed, CI green runs #1/#2, main bootstrapped, pre-phase1-safe tag). Correction addenda added to docs/evidence/phase0/auth-check.txt, docs/RISKS.md (R-001 reclassified, new R-017) and docs/PHASE_0_REPORT.md §13: the earlier 401s came from non-persistent shell env between tool calls (empty credential presented), not necessarily an invalid token.
+- WHY: Honesty rule — the record must not stand with a wrong diagnosis when the truth is known; the operational lesson (same-invocation credentials) is captured as R-017.
+- EVIDENCE: CI runs 38162440721 / 38162508120 green; addenda in the three files; first commit of phase1-core.
