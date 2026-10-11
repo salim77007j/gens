@@ -49,3 +49,8 @@ Rules:
 - WHAT: `.github/workflows/ci.yml` — docs-integrity gate (governance files present), secret-scan gate (GitHub token patterns), and a 3-OS matrix (ubuntu/windows/macos) with fmt, `clippy -D warnings`, build, test, headless-smoke and size-gate steps that self-detect the (not yet existing) workspace and skip cleanly. Concurrency cancellation, least-privilege `permissions: contents: read`.
 - WHY: Phase 0 §0.7 — automated quality gates on every push; gates are ARMED in Phase 0 and become ACTIVE in Phase 1 when `Cargo.toml` exists, so the workflow never blocks the process bootstrap.
 - EVIDENCE: this commit; first real workflow runs will occur on the first successful push (credential blocker recorded in R-001).
+
+### [2026-10-11T17:36Z] [phase0] build-safety tooling (C6)
+- WHAT: `scripts/verify.sh` (executable local pre-flight mirroring every CI gate; exits PASS on the current tree) and `rust-toolchain.toml` (stable channel + rustfmt + clippy, exact pin deferred to Phase 1 per ADR-0001).
+- WHY: Phase 0 §0.3/§0.8 — compile/test/size checks before every change; local and CI gates must be the same gates.
+- EVIDENCE: `docs/evidence/phase0/verify-run.txt` (exit 0, full output); commit 09619a1.
