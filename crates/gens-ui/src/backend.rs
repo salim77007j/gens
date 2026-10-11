@@ -208,6 +208,9 @@ mod tests {
     #[test]
     #[ignore = "needs a GPU adapter (CI: lavapipe/Metal)"]
     fn ui_paints_panel_text_and_button() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
         let Ok(ctx) = GpuContext::new() else {
             eprintln!("GPU-SKIP: no adapter for ui paint test");
             return;
@@ -215,6 +218,11 @@ mod tests {
         let renderer = Renderer::new(ctx, 160, 120).expect("renderer");
         let mut ui = UiRenderer::new();
 
+        // Widget rects are captured from the layout itself - no guessed
+        // rows, robust against egui style/margin changes.
+        let label_cell = Rc::new(Cell::new(egui::Rect::NOTHING));
+        let button_cell = Rc::new(Cell::new(egui::Rect::NOTHING));
+        let (lc, bc) = (label_cell.clone(), button_cell.clone());
         let frame = ui
             .render(
                 &renderer,
@@ -228,8 +236,8 @@ mod tests {
                             PANEL_FILL[2],
                         )))
                         .show(ui, |ui| {
-                            ui.label("gens");
-                            let _ = ui.button("ok");
+                            lc.set(ui.label("gens").rect);
+                            bc.set(ui.button("ok").rect);
                         });
                 },
             )
@@ -243,25 +251,32 @@ mod tests {
         let bg = pixel(&frame.pixels, 160, 3, 3);
         assert_eq!(bg, PANEL_FILL, "panel background must be exact");
 
-        // Text row (top of the central panel) must contain non-panel pixels.
-        let mut text_pixels = 0u32;
-        for x in 8..150 {
-            if pixel(&frame.pixels, 160, x, 12) != PANEL_FILL {
-                text_pixels += 1;
-            }
-        }
-        assert!(text_pixels > 0, "label glyphs must paint over the fill");
-
-        // Button area (just below the label) must also differ somewhere.
-        let mut button_pixels = 0u32;
-        for x in 8..150 {
-            for y in 24..40 {
-                if pixel(&frame.pixels, 160, x, y) != PANEL_FILL {
-                    button_pixels += 1;
+        let scan = |rect: egui::Rect| {
+            let mut differing = 0u32;
+            let x0 = rect.min.x as u32;
+            let y0 = rect.min.y as u32;
+            let x1 = (rect.max.x as u32).min(159);
+            let y1 = (rect.max.y as u32).min(119);
+            for x in x0..x1 {
+                for y in y0..y1 {
+                    if pixel(&frame.pixels, 160, x, y) != PANEL_FILL {
+                        differing += 1;
+                    }
                 }
             }
-        }
-        assert!(button_pixels > 0, "button must paint over the fill");
+            differing
+        };
+
+        assert!(
+            scan(label_cell.get()) > 0,
+            "label glyphs must paint over the fill (rect {:?})",
+            label_cell.get()
+        );
+        assert!(
+            scan(button_cell.get()) > 0,
+            "button must paint over the fill (rect {:?})",
+            button_cell.get()
+        );
     }
 
     #[test]
