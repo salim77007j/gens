@@ -110,3 +110,7 @@ Rules:
 - WHAT: snapshot module + example with 5 tests; deterministic PNG evidence archived; two clippy-1.99 lints fixed before commit.
 - WHY: Phase 1 task 6 (hello world: one entity, loop runs, screenshot on CI).
 - EVIDENCE: docs/evidence/phase1/hello_world.png; determinism proof (byte-identical reruns); workspace tests green.
+### [phase1] CI activation (P1-10)
+- WHAT: smoke test + artifact upload + 160 MiB size gate active on all 3 OS; ADR-0009 records the calibration.
+- WHY: Phase 1 task 5 (CI: build 3 OS, tests, clippy, fmt, headless smoke, size gate).
+- EVIDENCE: this commit; branch CI run will confirm (polled before merge).
