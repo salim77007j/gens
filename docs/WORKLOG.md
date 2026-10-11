@@ -79,3 +79,8 @@ Rules:
 - WHAT: Phase 0 completed on origin (branch pushed, CI green runs #1/#2, main bootstrapped, pre-phase1-safe tag). Correction addenda added to docs/evidence/phase0/auth-check.txt, docs/RISKS.md (R-001 reclassified, new R-017) and docs/PHASE_0_REPORT.md §13: the earlier 401s came from non-persistent shell env between tool calls (empty credential presented), not necessarily an invalid token.
 - WHY: Honesty rule — the record must not stand with a wrong diagnosis when the truth is known; the operational lesson (same-invocation credentials) is captured as R-017.
 - EVIDENCE: CI runs 38162440721 / 38162508120 green; addenda in the three files; first commit of phase1-core.
+
+### [phase1] workspace scaffolding (P1-2)
+- WHAT: Root workspace manifest + 15 stub crates per ADR-0001; workspace lints (unsafe forbid, clippy) and release profile.
+- WHY: Phase 1 task 1 - the workspace architecture is the backbone every later phase builds on.
+- EVIDENCE: cargo build/clippy green locally; verify.sh PASS; this commit.
