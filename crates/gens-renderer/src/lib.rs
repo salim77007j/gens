@@ -23,5 +23,5 @@ pub mod target;
 pub mod texture;
 
 pub use context::{AdapterClass, GpuContext};
-pub use renderer::{Draw, Renderer};
+pub use renderer::{Draw, Renderer, clear_color_rgba8};
 pub use resources::GpuMesh;

@@ -429,3 +429,31 @@ mod tests {
         assert_eq!(at(4, 32), [0, 0, 0, 255]);
     }
 }
+
+/// Builds a clear color from sRGB-encoded `RGBA8` bytes for a
+/// `Rgba8UnormSrgb` framebuffer. Exact for every component value: u8/255
+/// is already the encoded fraction the format stores. Engine code uses
+/// this instead of constructing `wgpu::Color` itself (ADR-0001).
+#[must_use]
+pub fn clear_color_rgba8(rgba8: [u8; 4]) -> wgpu::Color {
+    wgpu::Color {
+        r: f64::from(rgba8[0]) / 255.0,
+        g: f64::from(rgba8[1]) / 255.0,
+        b: f64::from(rgba8[2]) / 255.0,
+        a: f64::from(rgba8[3]) / 255.0,
+    }
+}
+
+#[cfg(test)]
+mod clear_color_tests {
+    use super::clear_color_rgba8;
+
+    #[test]
+    fn clear_color_conversion_is_exact() {
+        let c = clear_color_rgba8([24, 26, 33, 255]);
+        assert_eq!(c.r, 24.0 / 255.0);
+        assert_eq!(c.g, 26.0 / 255.0);
+        assert_eq!(c.b, 33.0 / 255.0);
+        assert_eq!(c.a, 1.0);
+    }
+}
