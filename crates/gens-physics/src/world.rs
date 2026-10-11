@@ -46,6 +46,8 @@ pub struct BodySpec {
     pub can_sleep: bool,
     /// Continuous collision detection against fast tunneling.
     pub ccd: bool,
+    /// Linear velocity damping (0 = none; 1 ≈ strong drag). Non-negative.
+    pub linear_damping: f32,
 }
 
 impl Default for BodySpec {
@@ -56,6 +58,7 @@ impl Default for BodySpec {
             linvel: Vec3::ZERO,
             can_sleep: true,
             ccd: false,
+            linear_damping: 0.0,
         }
     }
 }
@@ -70,6 +73,7 @@ impl BodySpec {
             linvel: Vec3::ZERO,
             can_sleep: true,
             ccd: false,
+            linear_damping: 0.0,
         }
     }
 
@@ -82,6 +86,7 @@ impl BodySpec {
             linvel: Vec3::ZERO,
             can_sleep: false,
             ccd: false,
+            linear_damping: 0.0,
         }
     }
 }
@@ -184,7 +189,8 @@ impl PhysicsWorld {
             .translation(convert::to_rapier_vec(body.position))
             .linvel(convert::to_rapier_vec(body.linvel))
             .can_sleep(body.can_sleep)
-            .ccd_enabled(body.ccd);
+            .ccd_enabled(body.ccd)
+            .linear_damping(body.linear_damping.max(0.0));
 
         let mut col = match collider.shape {
             ColliderShape::Ball(radius) => rp::ColliderBuilder::ball(radius),
@@ -360,14 +366,12 @@ mod tests {
         let mut b = gravity_world();
         let _floor_a = floor(&mut a);
         let _floor_b = floor(&mut b);
-        let (ball_a, _) = a.create_body(
-            BodySpec::dynamic_at(Vec3::new(0.0, 5.0, 0.0)),
-            ColliderSpec::default(),
-        );
-        let (ball_b, _) = b.create_body(
-            BodySpec::dynamic_at(Vec3::new(0.0, 5.0, 0.0)),
-            ColliderSpec::default(),
-        );
+        let spec = BodySpec {
+            linear_damping: 0.4,
+            ..BodySpec::dynamic_at(Vec3::new(0.0, 5.0, 0.0))
+        };
+        let (ball_a, _) = a.create_body(spec, ColliderSpec::default());
+        let (ball_b, _) = b.create_body(spec, ColliderSpec::default());
 
         for step in 0..600 {
             if step % 90 == 0 {

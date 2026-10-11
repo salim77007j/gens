@@ -21,4 +21,4 @@ pub mod keys;
 pub mod state;
 
 pub use keys::{DeviceEvent, KeyCode, MouseButton};
-pub use state::{Action, Binding, InputMap, InputState, axis_pair};
+pub use state::{Action, Binding, InputMap, InputState, axis, axis_pair};

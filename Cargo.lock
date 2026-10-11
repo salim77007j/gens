@@ -660,6 +660,9 @@ version = "0.1.0"
 [[package]]
 name = "gens-input"
 version = "0.1.0"
+dependencies = [
+ "gens-math",
+]
 
 [[package]]
 name = "gens-math"
@@ -676,6 +679,8 @@ version = "0.1.0"
 name = "gens-physics"
 version = "0.1.0"
 dependencies = [
+ "bevy_ecs",
+ "gens-ecs",
  "gens-math",
  "rapier3d",
  "thiserror",
@@ -698,7 +703,9 @@ version = "0.1.0"
 dependencies = [
  "gens-core",
  "gens-ecs",
+ "gens-input",
  "gens-math",
+ "gens-physics",
  "gens-renderer",
  "image",
 ]

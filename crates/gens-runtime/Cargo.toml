@@ -17,3 +17,5 @@ image.workspace = true
 gens-ecs.workspace = true
 gens-math.workspace = true
 gens-renderer.workspace = true
+gens-physics.workspace = true
+gens-input.workspace = true
