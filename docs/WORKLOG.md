@@ -84,3 +84,8 @@ Rules:
 - WHAT: Root workspace manifest + 15 stub crates per ADR-0001; workspace lints (unsafe forbid, clippy) and release profile.
 - WHY: Phase 1 task 1 - the workspace architecture is the backbone every later phase builds on.
 - EVIDENCE: cargo build/clippy green locally; verify.sh PASS; this commit.
+
+### [phase1] gens-math implemented (P1-3)
+- WHAT: glam facade + engine utilities + 11 unit tests; one test expectation corrected during authoring (documented in commit message).
+- WHY: Phase 1 task 4.
+- EVIDENCE: cargo test -p gens-math: 11 passed; clippy -D warnings clean; this commit.
