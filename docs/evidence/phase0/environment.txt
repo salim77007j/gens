@@ -1,0 +1,16 @@
+# Gens Phase 0 — Environment Inventory
+Captured: 2026-10-11T17:21:13Z
+
+## Platform
+Linux c-6acbbd66-14810412-2f3be79aab16 5.10.134-013.15.kangaroo.al8.x86_64 #1 SMP Thu Jul 30 12:54:59 UTC 2026 x86_64 GNU/Linux
+
+## Toolchain
+git version 2.47.3
+cargo/rustc: NOT INSTALLED in this environment (Phase 0 needs no compilation; rustup install scheduled before Phase 1 and recorded in docs/RISKS.md R-015)
+jq jq-1.7
+
+## Network
+https://github.com HTTP 200
+
+## Clock
+2026-10-11T17:21:14Z (UTC)

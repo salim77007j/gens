@@ -1,0 +1,17 @@
+# Gens Phase 0 — Clone Verification (Phase 0.1)
+Captured: 2026-10-11T17:21:14Z
+
+## Remote (credential-free URL — token never stored in git config)
+origin	https://github.com/salim77007j/gens.git (fetch)
+origin	https://github.com/salim77007j/gens.git (push)
+
+## Repository state at clone
+- git ls-remote (unauthenticated) exited 0 with ZERO refs -> repository exists and is EMPTY
+- git clone warning: 'You appear to have cloned an empty repository.'
+- No upstream HEAD to compare against (empty repo); first push will establish refs.
+
+## Branch
+phase0-risk-management
+e194fd07fbdbc3ae98abccd78bd0de5662130218
+## phase0-risk-management
+?? docs/evidence/

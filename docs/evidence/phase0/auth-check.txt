@@ -1,0 +1,22 @@
+# Gens Phase 0 — Push Credential Check (Phase 0.1 evidence)
+Captured: 2026-10-11T17:21:14Z
+
+The push token supplied for this project was tested against the GitHub API and git:
+
+1) GET /user with 'Authorization: Bearer <token>'  -> HTTP 401 {"message":"Bad credentials"}
+2) GET /user with 'Authorization: token <token>'   -> HTTP 401 {"message":"Bad credentials"}
+3) git push -u origin phase0-risk-management       -> remote: Invalid username or token.
+   fatal: Authentication failed for 'https://github.com/salim77007j/gens.git/'
+
+Diagnosis: the credential is not recognized by GitHub (revoked, expired, mistyped, or
+insufficient creation). Both API schemes fail identically, so this is not a header-format issue.
+
+Mitigation applied:
+- Repository credential helper reads GH_TOKEN from the process environment at push time.
+- No credential is stored in .git/config, in files, or in the repository.
+- All Phase 0 work is committed locally on branch phase0-risk-management.
+- Phase completion requires: a fresh token with Contents:read+write (classic 'repo' scope)
+  exported as GH_TOKEN, then the push sequence documented in docs/PHASE_0_REPORT.md section 10.
+
+Security note: the original token was shared in plaintext in chat and is now known to be invalid.
+It should be revoked/deleted regardless; see docs/RISKS.md R-001.
