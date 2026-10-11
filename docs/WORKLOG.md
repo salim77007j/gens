@@ -114,3 +114,7 @@ Rules:
 - WHAT: smoke test + artifact upload + 160 MiB size gate active on all 3 OS; ADR-0009 records the calibration.
 - WHY: Phase 1 task 5 (CI: build 3 OS, tests, clippy, fmt, headless smoke, size gate).
 - EVIDENCE: this commit; branch CI run will confirm (polled before merge).
+### [phase1] phase docs (P1-11)
+- WHAT: PHASE_1_REPORT.md (delivery summary, 53-test scorecard, honest issue log, numbers), README status/roadmap/build updates, RISKS updates (R-015 Mitigated, R-001 Corrected), test+size evidence files.
+- WHY: Phase deliverable - detailed report with evidence; roadmap reflects reality.
+- EVIDENCE: docs/evidence/phase1/{test-output.txt,example-run.txt,hello_world.png}; CI run URLs recorded at merge.

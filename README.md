@@ -43,8 +43,8 @@ The workspace, dependency graph, and profiles are defined in Phase 1 (see `docs/
 
 | Phase | Scope | Status | Report |
 |---|---|---|---|
-| 0 | Risk management & safe development | **In progress** | [`docs/PHASE_0_REPORT.md`](docs/PHASE_0_REPORT.md) |
-| 1 | Workspace + core runtime + ECS + math | Pending | — |
+| 0 | Risk management & safe development | **Complete** | [`docs/PHASE_0_REPORT.md`](docs/PHASE_0_REPORT.md) |
+| 1 | Workspace + core runtime + ECS + math | **Complete** | — |
 | 2 | Renderer (2D/3D, wgpu) | Pending | — |
 | 3 | Physics + audio + input | Pending | — |
 | 4 | Animation + UI + AI | Pending | — |
@@ -80,7 +80,17 @@ gens/
 
 ## Building
 
-The Cargo workspace lands in Phase 1. Until then, `scripts/verify.sh` performs the process-level checks (governance docs present, secret scan) and reports which gates are armed but not yet active.
+Requires Rust stable (1.99+). `rustup` installs everything:
+
+```bash
+git clone https://github.com/salim77007j/gens.git
+cd gens
+cargo build --workspace
+cargo test --workspace
+cargo run -p gens-runtime --example hello_world -- --frames 120 --out hello_world.png
+```
+
+`scripts/verify.sh` runs the full local gate set (fmt, clippy `-D warnings`, build, tests, size gate, governance checks) — it must pass before every push.
 
 ## License
 

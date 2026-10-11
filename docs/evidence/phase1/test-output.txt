@@ -1,0 +1,4 @@
+
+# binary sizes (debug, linux x86_64, rustc 1.99.0)
+hello_world: 79.8 MiB
+size gate: 160 MiB (ADR-0009)

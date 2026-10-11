@@ -6,7 +6,7 @@ Likelihood and Impact are scored Low / Medium / High. Status is one of `Open`, `
 
 | ID | Risk | Likelihood | Impact | Mitigation (summary) | Status |
 |---|---|---|---|---|---|
-| R-001 | Push credential leaked or invalid | High | High | Env-only storage, secret-scan gate, rotation guidance, local-commit buffer | **Realized** (invalid credential at Phase 0 start) |
+| R-001 | Push credential leaked or invalid | High | High | Env-only storage, secret-scan gate, rotation guidance, local-commit buffer | Corrected (process error, not credential failure - see detail note) |
 | R-002 | Sandbox environment reset loses local state | Medium | High | Push after every sub-item (once credentials work); re-clone procedure in ROLLBACK_PLAN §4 | Monitoring |
 | R-003 | CI unavailable / quota exhausted | Low | Medium | Public repo = free minutes; local `scripts/verify.sh` mirrors every gate | Monitoring |
 | R-004 | Software rendering (lavapipe) unrepresentative of GPU perf | High | Medium | Report relative + absolute numbers with environment disclosure; 60 FPS criterion measured honestly, not fabricated | Open |
@@ -20,7 +20,7 @@ Likelihood and Impact are scored Low / Medium / High. Status is one of `Open`, `
 | R-012 | Upstream dependency regression blocks a phase | Medium | Medium | Pin versions; patch locally or send upstream PR (Global Rule 10); ROLLBACK_PLAN §5 | Open |
 | R-013 | Cross-platform float determinism (physics/networking) | Medium | High | Fixed timestep, deterministic math discipline, cross-platform vector tests in Phase 3 | Open |
 | R-014 | Headless editor screenshots degrade fidelity (Phase 7) | Medium | Low | Software GL path + egui screenshot capture; document limitations honestly | Open |
-| R-015 | Rust toolchain absent in the current sandbox | High | Medium | Install rustup with pinned stable toolchain before Phase 1 build work; CI installs its own toolchain regardless | Open |
+| R-015 | Rust toolchain absent in the current sandbox | High | Medium | rustup 1.99.0 installed in Phase 1 (local gates run); CI installs its own toolchain regardless | Mitigated |
 | R-016 | Design reference misread → editor "copies" instead of "inspires" | Low | Medium | `docs/EDITOR_DESIGN.md` in Phase 7 must document extracted language AND Gens' divergences | Open |
 | R-017 | Non-persistent shell environment between tool calls silently breaks authenticated commands | High | Medium | Every command that authenticates must carry its credential in the SAME invocation; never rely on cross-call state (discovered Phase 0→1, caused the false R-001 diagnosis) | Monitoring |
 
