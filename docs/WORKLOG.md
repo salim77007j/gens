@@ -74,3 +74,47 @@ Rules:
 - WHAT: `docs/PHASE_0_REPORT.md` (requirement map §0.1–0.10, commit ledger, CI status, drill results, honest exit-criteria scorecard, credential-blocker diagnosis + 5-minute resume procedure) and finalized `docs/evidence/phase0/rollback-drill.txt`.
 - WHY: Phase deliverable — a detailed phase report with before/after evidence; the report deliberately does NOT claim CI-green or pushed state while R-001 blocks them.
 - EVIDENCE: this commit; phase status "COMPLETE LOCALLY — PUSH BLOCKED BY INVALID CREDENTIAL" per report §8/§9/§10.
+
+### [phase0→1] correction: credential diagnosis was a harness flaw
+- WHAT: Phase 0 completed on origin (branch pushed, CI green runs #1/#2, main bootstrapped, pre-phase1-safe tag). Correction addenda added to docs/evidence/phase0/auth-check.txt, docs/RISKS.md (R-001 reclassified, new R-017) and docs/PHASE_0_REPORT.md §13: the earlier 401s came from non-persistent shell env between tool calls (empty credential presented), not necessarily an invalid token.
+- WHY: Honesty rule — the record must not stand with a wrong diagnosis when the truth is known; the operational lesson (same-invocation credentials) is captured as R-017.
+- EVIDENCE: CI runs 38162440721 / 38162508120 green; addenda in the three files; first commit of phase1-core.
+
+### [phase1] workspace scaffolding (P1-2)
+- WHAT: Root workspace manifest + 15 stub crates per ADR-0001; workspace lints (unsafe forbid, clippy) and release profile.
+- WHY: Phase 1 task 1 - the workspace architecture is the backbone every later phase builds on.
+- EVIDENCE: cargo build/clippy green locally; verify.sh PASS; this commit.
+
+### [phase1] gens-math implemented (P1-3)
+- WHAT: glam facade + engine utilities + 11 unit tests; one test expectation corrected during authoring (documented in commit message).
+- WHY: Phase 1 task 4.
+- EVIDENCE: cargo test -p gens-math: 11 passed; clippy -D warnings clean; this commit.
+
+### [phase1] gens-core errors + logging (P1-4)
+- WHAT: error and logging modules with 4 unit tests; deps (thiserror/anyhow/tracing/tracing-subscriber) centralized in workspace.dependencies.
+- WHY: Phase 1 task 2 (error handling, logging).
+- EVIDENCE: cargo test -p gens-core green; clippy -D warnings clean; this commit.
+### [phase1] event bus semantics fix (P1-6b)
+- WHAT: Events<E> rewritten to snapshot/take semantics after 5 red tests exposed the double-buffer contract violation; process flaw (heredoc breaking && gates) identified and corrected.
+- WHY: Correctness of the documented event contract; honesty about how the red commit reached the branch.
+- EVIDENCE: 15/15 tests green; commit above; CI on branch will confirm.
+### [phase1] fixed-timestep game loop (P1-7)
+- WHAT: advance() pure math + GameLoop driver, 7 tests (22 total in gens-core); two authoring fixes documented in the commit (nanos truncation, const fn).
+- WHY: Phase 1 task 2 (fixed-timestep loop, variable render, catch-up guard).
+- EVIDENCE: 22/22 gens-core tests green; clippy/fmt clean; this commit.
+### [phase1] gens-ecs facade (P1-8)
+- WHAT: components, hierarchy helpers, exclusive propagation, EngineSchedules, prelude; 15 tests total incl. doc test; bevy_ecs 0.20.0 pinned.
+- WHY: Phase 1 task 3 (bevy_ecs integration, core components, hierarchy, transform propagation).
+- EVIDENCE: tests green; clippy clean; this commit.
+### [phase1] snapshot + hello_world example (P1-9)
+- WHAT: snapshot module + example with 5 tests; deterministic PNG evidence archived; two clippy-1.99 lints fixed before commit.
+- WHY: Phase 1 task 6 (hello world: one entity, loop runs, screenshot on CI).
+- EVIDENCE: docs/evidence/phase1/hello_world.png; determinism proof (byte-identical reruns); workspace tests green.
+### [phase1] CI activation (P1-10)
+- WHAT: smoke test + artifact upload + 160 MiB size gate active on all 3 OS; ADR-0009 records the calibration.
+- WHY: Phase 1 task 5 (CI: build 3 OS, tests, clippy, fmt, headless smoke, size gate).
+- EVIDENCE: this commit; branch CI run will confirm (polled before merge).
+### [phase1] phase docs (P1-11)
+- WHAT: PHASE_1_REPORT.md (delivery summary, 53-test scorecard, honest issue log, numbers), README status/roadmap/build updates, RISKS updates (R-015 Mitigated, R-001 Corrected), test+size evidence files.
+- WHY: Phase deliverable - detailed report with evidence; roadmap reflects reality.
+- EVIDENCE: docs/evidence/phase1/{test-output.txt,example-run.txt,hello_world.png}; CI run URLs recorded at merge.

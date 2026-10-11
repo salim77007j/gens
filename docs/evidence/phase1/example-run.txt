@@ -1,0 +1,9 @@
+# hello_world run log (2026-10-11T18:29:41Z)
+2026-10-11T18:29:41.783316Z  INFO Gens engine - hello world
+2026-10-11T18:29:41.783361Z  INFO run configuration frames=120 out="/tmp/hw2.png" filter=info
+2026-10-11T18:29:41.783840Z  INFO scene built root=1v0 hero=2v0
+2026-10-11T18:29:41.785882Z  INFO final frame report.fixed_steps=1 alpha=6.258487701416016e-6
+2026-10-11T18:29:41.785923Z  INFO simulation complete frames=120 total_steps=120 hitched_frames=0 hero_x=60.0 hero_y=0.0005359655478969216
+2026-10-11T18:29:41.844029Z  INFO snapshot written out="/tmp/hw2.png"
+
+determinism: two consecutive runs produced byte-identical PNGs (cmp exit 0)

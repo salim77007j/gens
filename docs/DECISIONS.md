@@ -127,3 +127,31 @@ This file is append-only: decisions are superseded by new ADRs, never rewritten.
 **Alternatives considered.** *Private repository* — rejected: Actions minutes would be consumed against a quota across the three-OS matrix, and the Phase 10 showcase would be invisible.
 
 **Risks & mitigations.** Accidental secret commit → secret-scan gate + `.gitignore` for `.env*`; if a secret ever lands, `git-filter-repo` + token revocation procedure is documented in `docs/ROLLBACK_PLAN.md` §5.
+
+---
+
+## ADR-0009 — Binary size gate: 160 MiB on debug example binaries (Phase 1 baseline)
+
+**Status:** Accepted (Phase 1)
+
+**Context.** Phase 0 §0.7 requires a binary-size gate on every push. No threshold existed before real binaries did; the hello-world example (gens-core + gens-ecs + bevy_ecs + glam + image, debug profile) measured **79.8 MiB** on Linux x86_64 (rustc 1.99.0, debug with assertions and debug symbols).
+
+**Decision.** Gate = 160 MiB (2x measured baseline) on the debug `hello_world` example binary, checked in CI on all three platforms. Release-profile gates with tighter budgets (LTO on, symbols stripped) are introduced with the renderer phase when real release binaries exist; the threshold moves by ADR, never silently.
+
+**Alternatives considered.** Gating on `target/` total (rejected: dominated by build intermediates, noisy); gating only release (deferred: no release artifacts yet).
+
+**Risks & mitigations.** Debug sizes vary across platforms (Windows PDBs live beside the binary, not in it — fine; macOS dSYM extraction not enabled) → gate watches the executable file itself, documented honestly; a dependency bump that explodes size trips the gate → that is the gate working as intended, revert-first per `docs/ROLLBACK_PLAN.md`.
+
+---
+
+## ADR-0009 - Binary size gate: 160 MiB on debug example binaries (Phase 1 baseline)
+
+**Status:** Accepted (Phase 1)
+
+**Context.** Phase 0 section 0.7 requires a binary-size gate on every push. No threshold existed before real binaries did; the hello-world example (gens-core + gens-ecs + bevy_ecs + glam + image, debug profile) measured **79.8 MiB** on Linux x86_64 (rustc 1.99.0, debug with assertions and debug symbols).
+
+**Decision.** Gate = 160 MiB (2x measured baseline) on the debug `hello_world` example binary, checked in CI on all three platforms. Release-profile gates with tighter budgets (LTO on, symbols stripped) are introduced with the renderer phase when real release binaries exist; the threshold moves by ADR, never silently.
+
+**Alternatives considered.** Gating on `target/` total (rejected: dominated by build intermediates, noisy); gating only release (deferred: no release artifacts yet).
+
+**Risks & mitigations.** Debug sizes vary across platforms (Windows PDBs live beside the binary, not in it; macOS dSYM extraction not enabled) so the gate watches the executable file itself, documented honestly; a dependency bump that explodes size trips the gate - that is the gate working as intended, revert-first per docs/ROLLBACK_PLAN.md.
