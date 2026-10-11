@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ------------------------------------------------------------------
+  # Gate 1: process integrity (active from Phase 0)
+  # ------------------------------------------------------------------
+  docs-gate:
+    name: gate / docs integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Governance docs present
+        run: |
+          set -eu
+          missing=0
+          for f in docs/WORKLOG.md docs/DECISIONS.md docs/RISKS.md docs/ROLLBACK_PLAN.md docs/EXPERIMENTS.md; do
+            if [ ! -f "$f" ]; then
+              echo "::error::missing governance doc: $f"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Secret scan (tracked files)
+        run: |
+          set -eu
+          # GitHub credential token patterns must never appear in tracked content.
+          if git grep -nE 'gh[pousr]_[A-Za-z0-9]{20,}' -- . ; then
+            echo "::error::possible GitHub credential committed — see docs/ROLLBACK_PLAN.md section 5"
+            exit 1
+          fi
+          echo "secret scan: clean"
+
+  # ------------------------------------------------------------------
+  # Gate 2: Rust quality gates (armed in Phase 0, active from Phase 1
+  # when the Cargo workspace exists — steps self-detect and skip cleanly)
+  # ------------------------------------------------------------------
+  rust-gates:
+    name: gates / ${{ matrix.os }}
+    needs: docs-gate
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Detect Cargo workspace
+        id: detect
+        shell: bash
+        run: |
+          if [ -f Cargo.toml ]; then
+            echo "active=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "No Cargo workspace yet (Phase 0): Rust gates armed, not active."
+          fi
+
+      - name: Install Rust toolchain
+        if: steps.detect.outputs.active == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        if: steps.detect.outputs.active == 'true'
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        if: steps.detect.outputs.active == 'true'
+        run: cargo fmt --all --check
+
+      - name: Clippy (deny warnings)
+        if: steps.detect.outputs.active == 'true'
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Build (workspace)
+        if: steps.detect.outputs.active == 'true'
+        run: cargo build --workspace --all-targets
+
+      - name: Tests
+        if: steps.detect.outputs.active == 'true'
+        run: cargo test --workspace
+
+      - name: Headless smoke test
+        if: steps.detect.outputs.active == 'true' && runner.os == 'Linux'
+        shell: bash
+        run: |
+          # Activated in Phase 1: xvfb-run + engine smoke binary + screenshot artifact.
+          echo "smoke test placeholder (workspace present, smoke binary lands in Phase 1)"
+
+      - name: Binary size gate
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # Calibrated with real binaries in Phase 1; threshold recorded in docs/DECISIONS.md.
+          echo "size gate placeholder (threshold calibrated in Phase 1)"

@@ -44,3 +44,8 @@ Rules:
 - WHAT: `docs/ROLLBACK_PLAN.md` (7-scenario playbook with time budgets, pre-change checklist, environment-loss recovery, secret-in-history procedure, drill definition) and `docs/EXPERIMENTS.md` (experiment policy + log template).
 - WHY: Phase 0 §0.6 (5-minute rollback guarantee) and §0.5 (isolated, documented experiments).
 - EVIDENCE: this commit; drill executed later in this phase records to `docs/evidence/phase0/rollback-drill.txt`.
+
+### [2026-10-11T17:33Z] [phase0] CI quality gates (C5)
+- WHAT: `.github/workflows/ci.yml` — docs-integrity gate (governance files present), secret-scan gate (GitHub token patterns), and a 3-OS matrix (ubuntu/windows/macos) with fmt, `clippy -D warnings`, build, test, headless-smoke and size-gate steps that self-detect the (not yet existing) workspace and skip cleanly. Concurrency cancellation, least-privilege `permissions: contents: read`.
+- WHY: Phase 0 §0.7 — automated quality gates on every push; gates are ARMED in Phase 0 and become ACTIVE in Phase 1 when `Cargo.toml` exists, so the workflow never blocks the process bootstrap.
+- EVIDENCE: this commit; first real workflow runs will occur on the first successful push (credential blocker recorded in R-001).
