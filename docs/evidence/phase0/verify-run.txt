@@ -1,0 +1,13 @@
+# Gens Phase 0 — verify.sh local gate execution
+Captured: 2026-10-11T17:22:51Z
+Command: ./scripts/verify.sh   (exit=0)
+
+--- stdout ---
+==> [0/6] governance docs present
+==> [1/6] secret scan
+==> no Cargo workspace yet (Phase 0) - Rust gates armed, not active
+VERIFY: PASS (phase-0 scope)
+
+--- static checks ---
+bash -n scripts/verify.sh: OK
+yaml.safe_load(.github/workflows/ci.yml): OK

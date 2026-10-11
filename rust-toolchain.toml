@@ -1,0 +1,8 @@
+# Gens engine toolchain pin (ADR-0001).
+# The stable channel is pinned for local builds; CI installs the same channel.
+# Exact version pinning happens when the workspace lands (Phase 1), so the
+# sandbox and CI agree on one version recorded in docs/DECISIONS.md.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
