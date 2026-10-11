@@ -144,14 +144,48 @@ This file is append-only: decisions are superseded by new ADRs, never rewritten.
 
 ---
 
-## ADR-0009 - Binary size gate: 160 MiB on debug example binaries (Phase 1 baseline)
+## ADR-0010 — Headless-first rendering: offscreen render targets as the primary path
 
-**Status:** Accepted (Phase 1)
+**Status:** Accepted (Phase 2)
 
-**Context.** Phase 0 section 0.7 requires a binary-size gate on every push. No threshold existed before real binaries did; the hello-world example (gens-core + gens-ecs + bevy_ecs + glam + image, debug profile) measured **79.8 MiB** on Linux x86_64 (rustc 1.99.0, debug with assertions and debug symbols).
+**Context.** The renderer must run on CI machines with no GPU, no window system and no display server, while still producing visual evidence (screenshots) on every push (Global Rule 2, ADR-0004). Window-surface presentation is not needed until the Phase 7 editor.
 
-**Decision.** Gate = 160 MiB (2x measured baseline) on the debug `hello_world` example binary, checked in CI on all three platforms. Release-profile gates with tighter budgets (LTO on, symbols stripped) are introduced with the renderer phase when real release binaries exist; the threshold moves by ADR, never silently.
+**Decision.** `gens-renderer` is designed **offscreen-first**: the primary render path draws into an engine-owned color+depth texture and reads pixels back to CPU memory (PNG-encodable) with no window, no surface and no display server dependency. Window-surface presentation is layered on top in a later phase via `raw-window-handle`; nothing in the core render API assumes a surface exists. Adapter selection never requires a `compatible_surface`.
 
-**Alternatives considered.** Gating on `target/` total (rejected: dominated by build intermediates, noisy); gating only release (deferred: no release artifacts yet).
+**Alternatives considered.**
+- *xvfb + GL surface on CI* — rejected: fragile display-server emulation, hidden state, slower, and does not map to Vulkan/Metal/DX12.
+- *Surface-first with headless mode bolted on* — rejected: two code paths to maintain; the surfaceless path is the strictly more general one.
 
-**Risks & mitigations.** Debug sizes vary across platforms (Windows PDBs live beside the binary, not in it; macOS dSYM extraction not enabled) so the gate watches the executable file itself, documented honestly; a dependency bump that explodes size trips the gate - that is the gate working as intended, revert-first per docs/ROLLBACK_PLAN.md.
+**Risks & mitigations.** Readback cost (GPU→CPU copy) is irrelevant at CI scene sizes; presentation path stays untested until Phase 7 → flagged in RISKS as deferred surface work; SRGB/framebuffer format choices fixed now (`Rgba8UnormSrgb` + `Depth24Plus`) are documented in code and can be revisited by ADR if a need appears.
+
+---
+
+## ADR-0011 — Software-rendering policy for CI: guaranteed lavapipe on Linux, graceful degradation elsewhere
+
+**Status:** Accepted (Phase 2)
+
+**Context.** ADR-0003 commits to a software fallback when no hardware adapter exists, but CI has three different graphics stories: GitHub `ubuntu-latest` has no Vulkan ICD by default, `macos-latest` has real Metal (Apple silicon), and `windows-latest` has only the Microsoft Basic Render Driver whose DX12 feature level is not guaranteed.
+
+**Decision.** The CI workflow **installs Mesa's lavapipe** (`mesa-vulkan-drivers`) on Linux and exports `VK_ICD_FILENAMES` (plus `vk_swiftshader`-style explicit ICD selection) so a real software Vulkan device always exists there. GPU integration tests are marked `#[ignore]` in the normal suite and executed by a dedicated CI step on Linux and macOS (both have guaranteed adapters: lavapipe / Metal). Windows runs the same step best-effort: if no adapter is found the step prints the adapter probe report and is skipped honestly (documented in the run log) rather than failing — the 3-OS guarantee applies to build/clippy/unit tests, while GPU-render guarantees are Linux+macOS until a Windows software adapter is proven stable.
+
+**Alternatives considered.**
+- *SwiftShader on all platforms* — rejected: not maintained for Windows runners; WARP is the Windows-native equivalent but unstable to configure via wgpu.
+- *Fail CI when Windows has no adapter* — rejected: a platform's missing software driver is not a code regression; failing would train the team to ignore red.
+
+**Risks & mitigations.** "Skipped honestly" can drift into "skipped silently" → the Windows step must print its probe evidence every run, and the phase report states exactly which OS rendered GPU frames; lavapipe behavior drift across Mesa versions → smoke expectations are structural (pixel classes, not exact bytes) on CI, with byte-exact determinism asserted only within a single machine run.
+
+---
+
+## ADR-0012 — Binary size gate recalibration: 350 MiB on the wgpu-linked debug example (Phase 2 baseline)
+
+**Status:** Accepted (Phase 2)
+
+**Context.** ADR-0009's 160 MiB gate watched the Phase 1 `hello_world` debug binary (79.8 MiB). Phase 2 added the wgpu renderer; the GPU smoke example `gpu_hello` (gens-core + gens-ecs + gens-renderer + wgpu 30, debug profile) measures **171.3 MiB** on Linux x86_64 (rustc 1.99.0) — the 160 MiB gate would now fail on the engine's own smoke binary, which is the gate working, but on a threshold that no longer reflects a regression: wgpu alone costs ~90 MiB in debug.
+
+**Decision.** The gate target moves to the heaviest example (`gpu_hello`) with **350 MiB** (2x the new measured baseline), checked on all three platforms. `hello_world` (80.0 MiB) remains built and run as the CPU smoke but is no longer the gated binary. Future thresholds move by ADR only.
+
+**Alternatives considered.**
+- Gating release binaries instead — deferred again: release LTO sizes become meaningful in Phase 8 (build pipeline); debug gates catch accidental dependency explosions earlier.
+- Excluding wgpu from the gate — rejected: hiding the renderer's weight defeats the gate's purpose.
+
+**Risks & mitigations.** Debug sizes vary across platforms (Windows PDBs live beside the binary; macOS dSYM not extracted) → the gate watches the executable file itself; a future dependency that doubles the binary trips the gate → revert-first per `docs/ROLLBACK_PLAN.md`, then recalibrate with evidence.

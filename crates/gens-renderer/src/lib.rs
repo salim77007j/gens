@@ -1,3 +1,27 @@
-//! wgpu-based renderer targeting Vulkan / DirectX 12 / Metal / WebGPU.
+//! wgpu-based renderer targeting Vulkan / DirectX 12 / Metal / WebGPU (Phase 2).
 //!
-//! Stub crate — implemented in Phase 2 (see README roadmap).
+//! Gens renders **offscreen-first** (ADR-0010): the primary path draws into
+//! engine-owned color+depth textures and reads pixels back to CPU memory, so
+//! the full renderer runs on machines with no GPU driver beyond a software
+//! rasterizer (CI uses Mesa's lavapipe — ADR-0011) and no window system.
+//! Window presentation is layered on top in a later phase.
+//!
+//! Modules:
+//! - [`context`]: GPU instance/adapter/device management with the ADR-0003
+//!   selection policy (discrete > integrated > software).
+//!
+//! All shaders are WGSL (ADR-0003). Engine code depends on this crate, never
+//! on wgpu directly (ADR-0001), except through explicitly re-exported types.
+
+pub mod camera;
+pub mod context;
+pub mod mesh;
+pub mod pipeline;
+pub mod renderer;
+pub mod resources;
+pub mod target;
+pub mod texture;
+
+pub use context::{AdapterClass, GpuContext};
+pub use renderer::{Draw, Renderer, clear_color_rgba8, srgb_byte_to_linear};
+pub use resources::GpuMesh;
