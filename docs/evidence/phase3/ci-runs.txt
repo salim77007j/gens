@@ -34,3 +34,11 @@ Size gate (ADR-0012): gpu_hello debug binary 179.5 MiB vs 350 MiB limit.
 
 Tests: 112 passed / 0 failed (+ example unit tests inside the count),
 executed on all three operating systems in run #40.
+
+MERGE TO MAIN (P3-7):
+  merge commit 4116c3b "merge: phase 3 - physics + audio + input
+  (rapier3d, kira, action maps; 112 tests)" --no-ff onto main.
+  MAIN RUN #42 sha=4116c3b conclusion=SUCCESS
+  url: https://github.com/salim77007j/gens/actions/runs/38177396919
+  created: 2026-10-11T21:41:16Z
+  Tag pre-phase4-safe pushed at the merge (rollback anchor, ADR-0005).
