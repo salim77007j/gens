@@ -24,12 +24,29 @@ if [ ! -f Cargo.toml ]; then
   exit 0
 fi
 
-say "[2/6] cargo fmt";    cargo fmt --all --check
-say "[3/6] cargo clippy"; cargo clippy --workspace --all-targets -- -D warnings
-say "[4/6] cargo build";  cargo build --workspace --all-targets
-say "[5/6] cargo test";   cargo test --workspace
-say "[6/6] binary size gate"
-# Calibrated with real binaries in Phase 1; threshold recorded in docs/DECISIONS.md.
-echo "(placeholder - calibrated in Phase 1)"
+say "[2/7] cargo fmt";    cargo fmt --all --check
+say "[3/7] cargo clippy"; cargo clippy --workspace --all-targets -- -D warnings
+say "[4/7] cargo build";  cargo build --workspace --all-targets
+say "[5/7] cargo test";   cargo test --workspace
+say "[6/7] GPU smoke (offscreen wgpu render; skips honestly without an adapter)"
+# Local machines may lack a Vulkan driver: --allow-no-gpu makes the
+# absence explicit instead of failing. CI (Linux+macOS) renders for real;
+# see ADR-0011 for the per-OS guarantees.
+cargo run -q -p gens-runtime --example gpu_hello -- --frames 60 --out /tmp/gens_verify_gpu.png --allow-no-gpu
+if [ -f /tmp/gens_verify_gpu.png ]; then
+  echo "gpu smoke: $(wc -c < /tmp/gens_verify_gpu.png) bytes rendered locally"
+else
+  echo "gpu smoke: GPU-SKIP (no adapter here; CI renders on Linux/macOS)"
+fi
+say "[7/7] binary size gate"
+# Calibrated in Phase 2 (ADR-0012): gpu_hello debug binary measured
+# 171.3 MiB on Linux x86_64 (wgpu-linked); gate = 2x headroom.
+LIMIT_BYTES=$((350 * 1024 * 1024))
+cargo build -q -p gens-runtime --example gpu_hello
+SIZE=$(wc -c < target/debug/examples/gpu_hello)
+echo "gpu_hello debug binary: $SIZE bytes (limit $LIMIT_BYTES)"
+if [ "$SIZE" -gt "$LIMIT_BYTES" ]; then
+  die "binary size gate failed: $SIZE > $LIMIT_BYTES (see docs/DECISIONS.md ADR-0012)"
+fi
 
 echo "VERIFY: PASS"

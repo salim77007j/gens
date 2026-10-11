@@ -83,6 +83,18 @@ jobs:
         if: steps.detect.outputs.active == 'true'
         uses: Swatinem/rust-cache@v2
 
+      # ADR-0011: guarantee a software Vulkan device on Linux (lavapipe)
+      # so GPU rendering and #[ignore]d GPU tests really execute in CI.
+      - name: Install software Vulkan driver (Linux)
+        if: steps.detect.outputs.active == 'true' && runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools
+          # ICD auto-discovery from /usr/share/vulkan/icd.d; print the probe
+          # as run-log evidence of which adapter CI actually renders with.
+          ls /usr/share/vulkan/icd.d/ || true
+          vulkaninfo --summary 2>/dev/null | head -30 || echo "vulkaninfo unavailable (non-fatal)"
+
       - name: Format check
         if: steps.detect.outputs.active == 'true'
         run: cargo fmt --all --check
@@ -95,37 +107,63 @@ jobs:
         if: steps.detect.outputs.active == 'true'
         run: cargo build --workspace --all-targets
 
-      - name: Tests
+      - name: Tests (unit)
         if: steps.detect.outputs.active == 'true'
         run: cargo test --workspace
 
-      - name: Headless smoke test (engine runs, snapshot produced)
+      - name: Tests (GPU integration, real adapter required)
+        if: steps.detect.outputs.active == 'true' && runner.os != 'Windows'
+        run: |
+          # Executes the #[ignore]d renderer tests. Linux uses lavapipe
+          # (installed above); macOS uses the runner's Metal device.
+          cargo test --workspace -- --ignored
+
+      - name: Headless CPU smoke (engine loop + ECS, no GPU)
         if: steps.detect.outputs.active == 'true'
         shell: bash
         run: |
-          # Phase 1 smoke: full headless engine run (loop + ECS + propagation)
-          # producing a deterministic PNG on every platform.
-          cargo run -p gens-runtime --example hello_world -- --frames 60 --out smoke.png
-          test -f smoke.png
-          echo "smoke snapshot: $(wc -c < smoke.png) bytes"
+          cargo run -p gens-runtime --example hello_world -- --frames 60 --out smoke_cpu.png
+          test -f smoke_cpu.png
+          echo "cpu smoke snapshot: $(wc -c < smoke_cpu.png) bytes"
 
-      - name: Upload smoke snapshot artifact
+      - name: Headless GPU smoke (wgpu offscreen render + PNG)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # Linux/macOS: must render for real (no skip flag — ADR-0011).
+          # Windows: best effort; prints GPU-SKIP when no adapter exists.
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cargo run -p gens-runtime --example gpu_hello -- --frames 60 --out smoke_gpu.png --allow-no-gpu
+            if [ -f smoke_gpu.png ]; then
+              echo "gpu smoke snapshot: $(wc -c < smoke_gpu.png) bytes"
+            else
+              echo "GPU-SKIP: Windows runner had no usable adapter this run (documented in the phase report)"
+            fi
+          else
+            cargo run -p gens-runtime --example gpu_hello -- --frames 60 --out smoke_gpu.png
+            test -f smoke_gpu.png
+            echo "gpu smoke snapshot: $(wc -c < smoke_gpu.png) bytes"
+          fi
+
+      - name: Upload smoke artifacts
         if: steps.detect.outputs.active == 'true' && runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: smoke-snapshot
-          path: smoke.png
+          name: smoke-snapshots
+          path: |
+            smoke_cpu.png
+            smoke_gpu.png
 
       - name: Binary size gate
         if: steps.detect.outputs.active == 'true'
         shell: bash
         run: |
-          # Threshold calibrated in Phase 1 (ADR-0009): debug example binary
-          # measured 79.8 MiB on Linux; gate = 2x headroom.
-          LIMIT_BYTES=$((160 * 1024 * 1024))
-          cargo build -p gens-runtime --example hello_world
-          SIZE=$(wc -c < target/debug/examples/hello_world)
-          echo "hello_world debug binary: $SIZE bytes (limit $LIMIT_BYTES)"
+          # ADR-0012: gate = 350 MiB on the debug gpu_hello binary — 2x the
+          # measured 171.3 MiB baseline (wgpu-linked, Linux x86_64).
+          LIMIT_BYTES=$((350 * 1024 * 1024))
+          cargo build -p gens-runtime --example gpu_hello
+          SIZE=$(wc -c < target/debug/examples/gpu_hello)
+          echo "gpu_hello debug binary: $SIZE bytes (limit $LIMIT_BYTES)"
           if [ "$SIZE" -gt "$LIMIT_BYTES" ]; then
             echo "::error::binary size gate failed: $SIZE > $LIMIT_BYTES"
             exit 1

@@ -173,3 +173,19 @@ This file is append-only: decisions are superseded by new ADRs, never rewritten.
 - *Fail CI when Windows has no adapter* — rejected: a platform's missing software driver is not a code regression; failing would train the team to ignore red.
 
 **Risks & mitigations.** "Skipped honestly" can drift into "skipped silently" → the Windows step must print its probe evidence every run, and the phase report states exactly which OS rendered GPU frames; lavapipe behavior drift across Mesa versions → smoke expectations are structural (pixel classes, not exact bytes) on CI, with byte-exact determinism asserted only within a single machine run.
+
+---
+
+## ADR-0012 — Binary size gate recalibration: 350 MiB on the wgpu-linked debug example (Phase 2 baseline)
+
+**Status:** Accepted (Phase 2)
+
+**Context.** ADR-0009's 160 MiB gate watched the Phase 1 `hello_world` debug binary (79.8 MiB). Phase 2 added the wgpu renderer; the GPU smoke example `gpu_hello` (gens-core + gens-ecs + gens-renderer + wgpu 30, debug profile) measures **171.3 MiB** on Linux x86_64 (rustc 1.99.0) — the 160 MiB gate would now fail on the engine's own smoke binary, which is the gate working, but on a threshold that no longer reflects a regression: wgpu alone costs ~90 MiB in debug.
+
+**Decision.** The gate target moves to the heaviest example (`gpu_hello`) with **350 MiB** (2x the new measured baseline), checked on all three platforms. `hello_world` (80.0 MiB) remains built and run as the CPU smoke but is no longer the gated binary. Future thresholds move by ADR only.
+
+**Alternatives considered.**
+- Gating release binaries instead — deferred again: release LTO sizes become meaningful in Phase 8 (build pipeline); debug gates catch accidental dependency explosions earlier.
+- Excluding wgpu from the gate — rejected: hiding the renderer's weight defeats the gate's purpose.
+
+**Risks & mitigations.** Debug sizes vary across platforms (Windows PDBs live beside the binary; macOS dSYM not extracted) → the gate watches the executable file itself; a future dependency that doubles the binary trips the gate → revert-first per `docs/ROLLBACK_PLAN.md`, then recalibrate with evidence.
