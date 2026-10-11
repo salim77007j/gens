@@ -39,3 +39,8 @@ Rules:
 - WHAT: `docs/DECISIONS.md` with ADR-0001..0008 (workspace layout, bevy_ecs facade, wgpu, CI-first, branch/tag discipline, licensing, governance set, public repo). `docs/RISKS.md` with register R-001..R-016 including detail notes; R-001 marked **Realized** (invalid push credential) with mitigations and user actions.
 - WHY: Phase 0 §0.9 — every architectural decision and risk documented with alternatives and mitigations; §0.4 — the credential blocker is a fact to record, not hide.
 - EVIDENCE: this commit; R-001 evidence at `docs/evidence/phase0/auth-check.txt`.
+
+### [2026-10-11T17:31Z] [phase0] rollback plan + experiment policy (C4)
+- WHAT: `docs/ROLLBACK_PLAN.md` (7-scenario playbook with time budgets, pre-change checklist, environment-loss recovery, secret-in-history procedure, drill definition) and `docs/EXPERIMENTS.md` (experiment policy + log template).
+- WHY: Phase 0 §0.6 (5-minute rollback guarantee) and §0.5 (isolated, documented experiments).
+- EVIDENCE: this commit; drill executed later in this phase records to `docs/evidence/phase0/rollback-drill.txt`.
