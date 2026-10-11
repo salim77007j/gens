@@ -1,3 +1,13 @@
 //! Game loop, time system, type-safe events, logging and error handling.
 //!
-//! Stub crate — implemented in Phase 1 (see README roadmap).
+//! Implemented across Phase 1 sub-items (see docs/WORKLOG.md):
+//! - [`error`]: [`EngineError`] + [`Result`] alias + anyhow re-export
+//! - [`logging`]: tracing setup with `GENS_LOG` filter
+//! - `time`: clocks with scaling (P1-5)
+//! - `events`: type-safe double-buffered event bus (P1-6)
+//! - `loop_`: fixed-timestep game loop (P1-7)
+
+pub mod error;
+pub mod logging;
+
+pub use error::{EngineError, Result};
