@@ -1,0 +1,4 @@
+# Rollback drill marker
+
+This file exists to be reverted. Created: 2026-10-11T17:23:07Z
+Scenario: ROLLBACK_PLAN playbook #1 (bad commit on phase branch -> git revert).
