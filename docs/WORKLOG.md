@@ -106,3 +106,7 @@ Rules:
 - WHAT: components, hierarchy helpers, exclusive propagation, EngineSchedules, prelude; 15 tests total incl. doc test; bevy_ecs 0.20.0 pinned.
 - WHY: Phase 1 task 3 (bevy_ecs integration, core components, hierarchy, transform propagation).
 - EVIDENCE: tests green; clippy clean; this commit.
+### [phase1] snapshot + hello_world example (P1-9)
+- WHAT: snapshot module + example with 5 tests; deterministic PNG evidence archived; two clippy-1.99 lints fixed before commit.
+- WHY: Phase 1 task 6 (hello world: one entity, loop runs, screenshot on CI).
+- EVIDENCE: docs/evidence/phase1/hello_world.png; determinism proof (byte-identical reruns); workspace tests green.
