@@ -7,7 +7,7 @@
 //! damping, remapping, epsilon comparison, axis-aligned bounding boxes, and a
 //! translate-rotate-scale matrix composer used by the ECS transform system.
 
-use glam::{Mat3, Mat4, Quat, Vec3};
+pub use glam::{Mat3, Mat4, Quat, Vec3};
 
 pub use glam::{
     IVec2, Mat3 as Mat3x, UVec2, Vec2, Vec3A, Vec4, ivec2, quat, uvec2, vec2, vec3, vec4,
