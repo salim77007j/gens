@@ -222,6 +222,31 @@ impl UiPipeline {
     }
 }
 
+/// Decodes egui's premultiplied-sRGB byte colors to the pipeline's
+/// linear space: RGB channels go through the sRGB transfer function
+/// (matching the decoded clear convention, ADR-0010 era evidence),
+/// alpha stays linear (coverage is a plain fraction).
+///
+/// The round trip is pinned by a unit test: an **opaque** color
+/// survives `decode -> Rgba8UnormSrgb store-encode` byte-exactly.
+#[must_use]
+pub fn premultiplied_srgb_to_linear(color: [f32; 4]) -> [f32; 4] {
+    [
+        decode_channel(color[0]),
+        decode_channel(color[1]),
+        decode_channel(color[2]),
+        color[3],
+    ]
+}
+
+fn decode_channel(c: f32) -> f32 {
+    if c <= 0.040_45 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
+}
+
 /// Validates one batch's index/vertex contract.
 pub(crate) fn validate_batch(vertex_count: usize, indices: &[u32]) -> Result<()> {
     if let Some(&max) = indices.iter().max()
@@ -266,6 +291,26 @@ mod tests {
             let got = f32::from_le_bytes(bytes[i * 4..i * 4 + 4].try_into().expect("in range"));
             assert_eq!(got, *expected, "field {i}");
         }
+    }
+
+    #[test]
+    fn opaque_premultiplied_srgb_round_trips_through_the_target() {
+        // decode -> (GPU encodes on store) must land on the source byte.
+        for b in [20u8, 24, 33, 0, 127, 255] {
+            let linear = decode_channel(b as f32 / 255.0);
+            // The store-side encode (sRGB transfer function):
+            let encoded = if linear <= 0.003_130_8 {
+                linear * 12.92
+            } else {
+                1.055 * linear.powf(1.0 / 2.4) - 0.055
+            };
+            let byte = (encoded * 255.0).round();
+            assert_eq!(byte, b as f32, "byte {b} must round-trip");
+        }
+        // Alpha is coverage: linear, never transferred.
+        let color = premultiplied_srgb_to_linear([0.2, 0.4, 0.6, 0.5]);
+        assert!((color[3] - 0.5).abs() < 1e-6);
+        assert!(color[0] < 0.2, "decode must darken mid-tones");
     }
 
     #[test]

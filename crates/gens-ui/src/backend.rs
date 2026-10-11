@@ -16,7 +16,9 @@
 use std::collections::BTreeMap;
 
 use gens_core::error::Result;
-use gens_renderer::{GpuTexture, Renderer, UiBatch, UiVertex, clear_color_rgba8};
+use gens_renderer::{
+    GpuTexture, Renderer, UiBatch, UiVertex, clear_color_rgba8, premultiplied_srgb_to_linear,
+};
 
 use crate::context::UiContext;
 use crate::frame::{TextureRef, UiFrame, UiInput};
@@ -114,7 +116,10 @@ impl UiRenderer {
                 .map(|v| UiVertex {
                     pos: UiVertex::ndc_from_pixel(v.pos[0], v.pos[1], w, h),
                     uv: v.uv,
-                    color: v.color,
+                    // egui colors are premultiplied sRGB bytes; the
+                    // pipeline works in linear (same convention as the
+                    // decoded clear), so RGB decodes and alpha stays.
+                    color: premultiplied_srgb_to_linear(v.color),
                 })
                 .collect();
             drawable.push((&mesh.indices, texture, mesh.clip_rect_px, verts));
