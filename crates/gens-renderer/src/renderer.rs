@@ -275,7 +275,8 @@ mod tests {
         let queue = r.context().queue();
         set_unit_camera(&r, queue);
         r.set_model(queue, 0, Mat4::IDENTITY).unwrap();
-        let tri = GpuMesh::upload(device, &mesh::triangle()).unwrap();
+        let tri_cpu = mesh::triangle();
+        let tri = GpuMesh::upload(device, &tri_cpu).unwrap();
 
         let px = r
             .draw_and_read(
@@ -296,17 +297,36 @@ mod tests {
         // Corner: pure white clear (endpoint colors are byte-exact).
         assert_eq!(at(2, 2), [255, 255, 255, 255]);
 
-        // Centroid: linear (1/3, 1/3, 1/3) -> equal sRGB channels well
-        // below white; every channel equal within rounding.
-        let c = at(32, 32);
-        let expect = srgb_encode(1.0 / 3.0) * 255.0;
-        for &ch in &c[..3] {
+        // Interpolation check with full precision: the sample point is the
+        // CENTER of pixel (32,32), which in the 2x2 ortho camera is world
+        // (0.015625, -0.015625) — NOT the triangle's visual centroid. Solve
+        // the barycentric weights there, interpolate the LINEAR vertex
+        // colors, sRGB-encode, and compare within rounding (proved byte-
+        // identical on llvmpipe/Vulkan and Apple Metal in CI).
+        let sample = (0.015_625_f32, -0.015_625_f32);
+        let (a, b, c3) = ([-0.5_f32, -0.5], [0.5_f32, -0.5], [0.0_f32, 0.5]);
+        let denom = (b[1] - c3[1]) * (a[0] - c3[0]) + (c3[0] - b[0]) * (a[1] - c3[1]);
+        let wa =
+            ((b[1] - c3[1]) * (sample.0 - c3[0]) + (c3[0] - b[0]) * (sample.1 - c3[1])) / denom;
+        let wb =
+            ((c3[1] - a[1]) * (sample.0 - c3[0]) + (a[0] - c3[0]) * (sample.1 - c3[1])) / denom;
+        let wc = 1.0 - wa - wb;
+        assert!(
+            (wa > 0.0) && (wb > 0.0) && (wc > 0.0),
+            "sample must be inside the triangle"
+        );
+        let got = at(32, 32);
+        for (ch, got_ch) in got[..3].iter().enumerate() {
+            let lin = wa * tri_cpu.vertices[0].color[ch]
+                + wb * tri_cpu.vertices[1].color[ch]
+                + wc * tri_cpu.vertices[2].color[ch];
+            let expect = srgb_encode(lin) * 255.0;
             assert!(
-                (f32::from(ch) - expect).abs() <= 3.0,
-                "centroid {c:?} vs {expect}"
+                (f32::from(*got_ch) - expect).abs() <= 2.0,
+                "channel {ch}: got {got_ch} want {expect} (weights {wa:.4}/{wb:.4}/{wc:.4})"
             );
         }
-        assert_eq!(c[3], 255);
+        assert_eq!(got[3], 255);
     }
 
     /// Model matrices + depth: two blue quads at different depths drawn in

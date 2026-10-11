@@ -142,8 +142,9 @@ fn main() -> anyhow::Result<()> {
     const Z_BACKGROUND: f32 = -0.4;
     const Z_TRAIL: f32 = -0.2;
     const Z_HERO: f32 = 0.1;
-    let cx = width as f32 * 0.5;
+    // Framebuffer center (the ortho camera origin), used by verification.
     let cy = height as f32 * 0.5;
+    let cx = width as f32 * 0.5;
 
     let source = FixedSource::new(Duration::from_secs_f64(1.0 / 60.0));
     let mut game_loop = GameLoop::new(LoopConfig::default(), source);
@@ -176,7 +177,7 @@ fn main() -> anyhow::Result<()> {
             queue,
             0,
             compose_trs(
-                Vec3::new(cx, cy, Z_BACKGROUND),
+                Vec3::new(0.0, 0.0, Z_BACKGROUND),
                 Quat::IDENTITY,
                 Vec3::new(width as f32, height as f32, 1.0),
             ),
@@ -194,7 +195,7 @@ fn main() -> anyhow::Result<()> {
                 queue,
                 slot,
                 compose_trs(
-                    Vec3::new(cx + x, cy + y, Z_TRAIL),
+                    Vec3::new(*x, *y, Z_TRAIL),
                     Quat::IDENTITY,
                     Vec3::splat(TRAIL_SIZE),
                 ),
@@ -209,7 +210,7 @@ fn main() -> anyhow::Result<()> {
             queue,
             slot,
             compose_trs(
-                Vec3::new(cx + hero_pos.x, cy + hero_pos.y, Z_HERO),
+                Vec3::new(hero_pos.x, hero_pos.y, Z_HERO),
                 Quat::IDENTITY,
                 Vec3::splat(HERO_SIZE),
             ),
@@ -259,9 +260,9 @@ fn main() -> anyhow::Result<()> {
         assert_ne!(border, corner, "border must not be a checker corner");
     }
     // 2) Hero pixel: after `frames` steps the orbit lands at world
-    //    (ORBIT_RADIUS, 0) -> screen (cx + ORBIT_RADIUS, cy). It must not
-    //    be background or trail color.
-    let hero_screen_x = (cx + ORBIT_RADIUS) as u32;
+    //    (ORBIT_RADIUS, 0). The camera is centered on the framebuffer, so
+    //    framebuffer pixels are (world_x + W/2, H/2 - world_y).
+    let hero_screen_x = (ORBIT_RADIUS + cx) as u32;
     let hero_px = px(hero_screen_x.min(width - 2), (cy as u32).min(height - 2));
     assert_ne!(
         hero_px, bg,
@@ -274,8 +275,8 @@ fn main() -> anyhow::Result<()> {
     // 3) The accent trail must exist somewhere: at least one sampled trail
     //    point differs from background.
     let trail_present = trail.iter().step_by(8).any(|(x, y)| {
-        let sx = (cx + x) as i32;
-        let sy = (cy + y) as i32;
+        let sx = (x + cx) as i32;
+        let sy = (cy - y) as i32;
         sx > 0
             && sy > 0
             && (sx as u32) < width
