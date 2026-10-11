@@ -132,9 +132,13 @@ impl UiContext {
         let [w, h] = input.size_px;
         let screen = Rect::from_min_size(Pos2::ZERO, Vec2::new(w as f32, h as f32));
         let mut viewports = egui::ViewportIdMap::default();
-        let mut info = ViewportInfo::default();
-        info.inner_rect = Some(screen);
-        viewports.insert(ViewportId::ROOT, info);
+        viewports.insert(
+            ViewportId::ROOT,
+            ViewportInfo {
+                inner_rect: Some(screen),
+                ..ViewportInfo::default()
+            },
+        );
         RawInput {
             viewport_id: ViewportId::ROOT,
             viewports,
@@ -159,11 +163,9 @@ impl UiContext {
         id: TextureId,
         delta: &egui::epaint::ImageDelta,
     ) -> Option<TextureUpload> {
-        // ImageData has a single Color variant today; a bare match keeps
-        // the compiler enforcing that fact on upstream changes.
-        let image = match &delta.image {
-            egui::epaint::ImageData::Color(image) => image,
-        };
+        // ImageData has a single Color variant today; the irrefutable
+        // let keeps the compiler enforcing that fact on upstream changes.
+        let egui::epaint::ImageData::Color(image) = &delta.image;
         let [w, h] = [image.width(), image.height()];
         let rgba: Vec<u8> = image.pixels.iter().flat_map(|c| c.to_array()).collect();
 
@@ -171,7 +173,7 @@ impl UiContext {
         match delta.pos {
             None => {
                 self.textures.insert(
-                    r.clone(),
+                    r,
                     TextureRecord {
                         width: w as u32,
                         height: h as u32,
