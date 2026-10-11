@@ -102,3 +102,7 @@ Rules:
 - WHAT: advance() pure math + GameLoop driver, 7 tests (22 total in gens-core); two authoring fixes documented in the commit (nanos truncation, const fn).
 - WHY: Phase 1 task 2 (fixed-timestep loop, variable render, catch-up guard).
 - EVIDENCE: 22/22 gens-core tests green; clippy/fmt clean; this commit.
+### [phase1] gens-ecs facade (P1-8)
+- WHAT: components, hierarchy helpers, exclusive propagation, EngineSchedules, prelude; 15 tests total incl. doc test; bevy_ecs 0.20.0 pinned.
+- WHY: Phase 1 task 3 (bevy_ecs integration, core components, hierarchy, transform propagation).
+- EVIDENCE: tests green; clippy clean; this commit.
