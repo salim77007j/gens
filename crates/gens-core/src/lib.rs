@@ -9,6 +9,7 @@
 
 pub mod error;
 pub mod events;
+pub mod game_loop;
 pub mod logging;
 pub mod time;
 
