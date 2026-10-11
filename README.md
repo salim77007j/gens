@@ -1,5 +1,5 @@
-> **Status: Phase 2 — wgpu Renderer.**
-> Phases 0-1 complete and CI-verified (workspace, core runtime, ECS, math). Phase 2 delivers the offscreen-first wgpu renderer with GPU-rendered screenshots verified on Linux (lavapipe/Vulkan), macOS (Metal), and Windows (DX12 software adapter) — see [`docs/PHASE_2_REPORT.md`](docs/PHASE_2_REPORT.md) and the live status in [`docs/WORKLOG.md`](docs/WORKLOG.md).
+> **Status: Phase 3 — Physics + Audio + Input.**
+> Phases 0-2 complete and CI-verified (workspace, core runtime, ECS, math, offscreen-first wgpu renderer with GPU screenshots on 3 OS). Phase 3 adds rapier3d rigid-body physics, kira headless audio, and a pure action-mapping input model — composed and proven by a deterministic scripted-replay demo (`physics_hello`) that runs bit-identically on every push. See [`docs/PHASE_3_REPORT.md`](docs/PHASE_3_REPORT.md) and the live status in [`docs/WORKLOG.md`](docs/WORKLOG.md).
 
 
 ## Design Goals
@@ -39,7 +39,7 @@ The workspace, dependency graph, and profiles are defined in Phase 1 (see `docs/
 | 0 | Risk management & safe development | **Complete** | [`docs/PHASE_0_REPORT.md`](docs/PHASE_0_REPORT.md) |
 | 1 | Workspace + core runtime + ECS + math | **Complete** | inline in `docs/WORKLOG.md` (Phase 1 entry) |
 | 2 | Renderer (offscreen-first wgpu, GPU CI) | **Complete** | [`docs/PHASE_2_REPORT.md`](docs/PHASE_2_REPORT.md) |
-| 3 | Physics + audio + input | Pending | — |
+| 3 | Physics + audio + input | **Complete** | [`docs/PHASE_3_REPORT.md`](docs/PHASE_3_REPORT.md) |
 | 4 | Animation + UI + AI | Pending | — |
 | 5 | Scripting + assets + save | Pending | — |
 | 6 | Networking + data assets | Pending | — |
@@ -87,6 +87,9 @@ cargo run -p gens-runtime --example hello_world -- --frames 120 --out hello_worl
 # GPU path (needs any Vulkan/DX12/Metal adapter; software like lavapipe works):
 cargo run -p gens-runtime --example gpu_hello -- --frames 120 --out gpu_hello.png
 #   append --allow-no-gpu to skip with an explicit marker instead of failing
+
+# Deterministic physics replay (input -> physics -> ECS, CPU-only):
+cargo run -p gens-runtime --example physics_hello -- --steps 600 --out physics_hello.json
 
 # run the GPU integration tests too (requires an adapter):
 cargo test -p gens-renderer -- --ignored

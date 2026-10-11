@@ -10,3 +10,9 @@ authors.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+gens-math.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+kira.workspace = true

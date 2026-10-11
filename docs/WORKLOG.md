@@ -183,3 +183,43 @@ Rules:
 - WHAT: phase2-renderer merged to main (--no-ff, merge commit 0f3a7ca); main CI run #33 SUCCESS; annotated tag pre-phase3-safe pushed at the merge. Evidence file records the merge run URL (verified via API).
 - WHY: ADR-0005 - main receives only verified phase results; the pre-phase3-safe tag is the five-minute rollback anchor for Phase 3.
 - EVIDENCE: docs/evidence/phase2/ci-runs.txt MERGE section; tags pre-phase1-safe/pre-phase2-safe/pre-phase3-safe all on origin.
+
+### [phase3] dependency pins + branch start (P3-0)
+- WHAT: branch phase3-physics-audio-input; rapier3d 0.36.1 + kira 0.12.5 (default-features OFF - cpal needs ALSA headers CI cannot install) pinned in [workspace.dependencies]; gens-physics/gens-input/gens-audio registered as workspace path deps; shells wired. Both APIs verified against vendored registry source BEFORE any code: rapier 0.36 has a PhysicsWorld convenience wrapper + glam-based math (glamx, glam 0.33.12 tree vs gens' 0.34.1 - converters required), kira has a MockBackend with manual process() and public StaticSoundData fields.
+- WHY: Phase 3 pillar deps (README roadmap row 3); the no-guessing discipline caught the dual-glam-tree fact early and shaped the facade.
+- EVIDENCE: crates.io max-stable queries; `cargo tree` unification check; this commit.
+
+### [phase3] gens-physics: rapier facade + ECS glue (P3-1)
+- WHAT: convert.rs (glam 0.34 <-> rapier glam 0.33 value converters, round-trip + f32-width guards); world.rs (PhysicsWorld: fixed 1/60 stepping, BodySpec/ColliderSpec value types, dynamic/fixed/kinematic bodies, ball/cuboid colliders, position/rotation/velocity readback, impulses, kinematic teleport, body_kind readback); ecs.rs (PhysicsResource newtype resource, PhysicsBody component, step_physics_system, sync_transforms_from_physics - dynamic/kinematic synced, fixed keep authored transforms). 13 unit tests.
+- WHY: Phase 3 physics pillar; facade keeps rapier out of engine code (ADR-0013).
+- EVIDENCE: 13 passed; clippy clean. Two honest discoveries: bevy_ecs 0.20 requires Resource: Component (hence the newtype), and rapier's RigidBodyType has a SoftFrame variant (non-exhaustive match fixed).
+
+### [phase3] determinism + integrator honesty fixes (P3-1b)
+- WHAT: My first free-fall test pinned semi-implicit Euler coefficients; a probe showed rapier 0.36 integrates differently (drop = (n-3/8)*g*dt^2, velocity exactly linear). Rewrote the contract to physics, not internals: velocity == g*t exact, position within 5 cm of closed-form 1/2*g*t^2, resting contact at floor top, impulse/velocity = 1/m, kinematic teleport, 600-step two-world bit-identical replay with periodic impulses. ECS test thresholds fixed to the measured resting height (0.494) instead of my wrong 4 m drop assumption.
+- WHY: Pinning upstream integration internals would break on every rapier upgrade and was unverifiable by construction; the kinematic contract is the actual engine guarantee.
+- EVIDENCE: 13 passed; probe outputs recorded in this worklog's commit history (probe removed after measurement).
+
+### [phase3] gens-input: pure action-mapping model (P3-2)
+- WHAT: keys.rs (engine-owned KeyCode/MouseButton/DeviceEvent, #[non_exhaustive]); state.rs (InputMap add/unbind/clear + OR-combined bindings; InputState DeviceEvent feed, end-of-frame update() edge rotation, hold/just queries per key/mouse/action, cursor pos+delta, wheel, clear_all focus loss; axis/axis_pair helpers). 9 unit tests. Deliberately bevy-free (ADR-0015): the generic Resource:Component constraint cannot be satisfied without polluting user action enums; ECS wrapper lands with windowing.
+- WHY: gameplay must bind to actions, not raw controls; the DeviceEvent stream is the future winit/gilrs backend contract.
+- EVIDENCE: 9 passed; clippy clean; one wrong test expectation fixed (mouse delta is total movement since update, (13,2), not the last hop).
+
+### [phase3] gens-audio: kira mock-backend engine (P3-3)
+- WHAT: AudioEngine over MockBackend (44.1 kHz default; process() advances the real mixer exactly 128 frames/tick - asserted; process_n helper); SoundHandle (state/position/pause/resume/stop/set_loop_region); tone.rs (sine/silence from raw Frames + rms_left metric - no assets, no decoder features). 10 unit tests incl. measured semantics: 1-tick command lag, frozen position while paused, wrapped loop positions, one-shot natural completion, independent handles, per-sound volume/panning accepted.
+- WHY: Phase 3 audio pillar, headless-first (ADR-0014); realtime cpal output deferred as a feature flag (R-018).
+- EVIDENCE: 10 passed; clippy clean. Honest finding: kira's default Tween is 10 ms (NOT instant) - tests use an 8-tick settle helper measured against source.
+
+### [phase3] physics_hello: scripted replay integration proof (P3-4)
+- WHAT: gens-runtime example: input_script() DeviceEvent timeline feeds InputState; per fixed step: script feed -> action queries -> input.update() -> solver step -> transform sync + propagation; two 600-step runs asserted BIT-IDENTICAL; behavioral gates (strafe +x, MoveLeft pulls below pre-phase x, jump peak > pre-jump y, never below floor, rests at ~0.5); trajectory JSON evidence output. 3 unit tests. gens-runtime gains gens-physics + gens-input deps.
+- WHY: the integration proof across input+physics+ECS+loop (R-013 replay architecture), and the CI physics smoke binary.
+- EVIDENCE: local run green (final_x=7.905011177062988, final_y=0.49992, peak_y=1.22952); clippy clean. Three real bugs caught by my own gates and fixed with evidence: (1) physics step was missing from the loop (x stayed 0) - and a patch script silently no-op'd once, re-applied with asserts; (2) input.update() before queries swallowed the jump edge (documented ordering contract proven necessary); (3) per-step impulse magnitude error -> 47 m/s ball rolled off the 60 m floor (min_y -325): fixed with realistic 0.05 Ns impulses, linear_damping on BodySpec (rapier has NO rolling resistance), CCD on the player, 100 m floor.
+
+### [phase3] CI physics smoke on 3 OS + verify.sh 8 gates (P3-5)
+- WHAT: ci.yml new step runs physics_hello on EVERY OS (CPU-only: no adapter caveats, unlike the GPU smoke); smoke_physics.json joins the artifact; verify.sh gains gate [6/8] mirroring it.
+- WHY: every push must exercise the new pillars on all platforms (ADR-0004); the replay makes the 3-OS run a cross-platform consistency witness.
+- EVIDENCE: local verify.sh PASS (112 tests, 29290 B trajectory, GPU-SKIP honest in sandbox, size gate 179.5 MiB vs 350 MiB); branch run #40 SUCCESS.
+
+### [phase3] phase docs + evidence (P3-6)
+- WHAT: PHASE_3_REPORT.md (scorecard, issue log, cross-OS determinism table), ADR-0013/0014/0015, RISKS (R-013 narrowed with per-OS evidence, R-018/R-019 added), README status/roadmap/build docs, evidence ledger docs/evidence/phase3/ci-runs.txt with run URLs.
+- WHY: governance reconciliation at phase end (ADR-0007).
+- EVIDENCE: run #40 logs (physics smoke 29290/29290/29253 bytes on Windows/Linux/macOS; x86_64 pair bit-identical, ARM64 macOS low-bit variance); this commit.

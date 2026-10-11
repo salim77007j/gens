@@ -126,6 +126,16 @@ jobs:
           test -f smoke_cpu.png
           echo "cpu smoke snapshot: $(wc -c < smoke_cpu.png) bytes"
 
+      - name: Headless physics smoke (input -> physics -> ECS, no GPU)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # CPU-only by design: deterministic replay runs bit-identically on
+          # all three operating systems (R-013 in-process determinism).
+          cargo run -p gens-runtime --example physics_hello -- --steps 600 --out smoke_physics.json
+          test -f smoke_physics.json
+          echo "physics smoke trajectory: $(wc -c < smoke_physics.json) bytes"
+
       - name: Headless GPU smoke (wgpu offscreen render + PNG)
         if: steps.detect.outputs.active == 'true'
         shell: bash
@@ -153,6 +163,7 @@ jobs:
           path: |
             smoke_cpu.png
             smoke_gpu.png
+            smoke_physics.json
 
       - name: Binary size gate
         if: steps.detect.outputs.active == 'true'

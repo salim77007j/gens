@@ -189,3 +189,54 @@ This file is append-only: decisions are superseded by new ADRs, never rewritten.
 - Excluding wgpu from the gate — rejected: hiding the renderer's weight defeats the gate's purpose.
 
 **Risks & mitigations.** Debug sizes vary across platforms (Windows PDBs live beside the binary; macOS dSYM not extracted) → the gate watches the executable file itself; a future dependency that doubles the binary trips the gate → revert-first per `docs/ROLLBACK_PLAN.md`, then recalibrate with evidence.
+
+---
+
+## ADR-0013 — Physics: rapier3d behind a `gens-physics` facade
+
+**Status:** Accepted (Phase 3)
+
+**Context.** The engine needs rigid-body dynamics (bodies, colliders, fixed-step integration) that is pure Rust (no FFI toolchain on three CI platforms), headless-testable, and deterministic enough for replays.
+
+**Decision.** Integrate `rapier3d` **0.36.1** (pinned) behind `gens-physics`: a `PhysicsWorld` facade with value-type `BodySpec`/`ColliderSpec`, explicit fixed-timestep stepping (`step()` only — never wall time), and ECS glue (`PhysicsResource` newtype resource, `PhysicsBody` component, step + transform-sync systems writing the standard `Transform`). All values cross the rapier boundary through tested converters in one module: rapier 0.36 resolves to parry's `glamx` (glam 0.33.12) while gens standardizes on glam 0.34.1, so the types are distinct despite identical layout. The raw crate stays reachable as `gens_physics::backend` (the `gens-ecs::ecs` convention). The determinism contract is **in-process bit-identical replay** (asserted over 600 steps with periodic impulses); cross-platform bit-identity is NOT claimed (R-013), and CI logs per-OS final positions as evidence.
+
+**Alternatives considered.**
+- *PhysX / other C++ physics via FFI* — rejected: build-system and safety burden on three platforms contradicts ADR-0001.
+- *Custom solver* — rejected: years of work, zero product differentiation for our goals.
+- *Avian/bevy_xpbd (bevy-ecosystem physics)* — rejected: deep bevy-app coupling; gens uses standalone bevy_ecs behind a facade (ADR-0002).
+
+**Risks & mitigations.** rapier version churn → exact pin + facade confines churn (R-019); rapier's integrator is a version-internal detail → tests pin Newtonian kinematics (v = g·t exact, y within 5 cm of ½g·t²), not solver coefficients; fast movers tunnel → CCD flag on `BodySpec`, exposed and used by the demo; no rolling resistance by default → `linear_damping` exposed on `BodySpec`.
+
+---
+
+## ADR-0014 — Audio: kira with headless-first mock processing; realtime output deferred
+
+**Status:** Accepted (Phase 3)
+
+**Context.** The audio pillar must be verifiable in CI, which has no audio devices and (in our sandbox) no ALSA headers for building cpal. Device output is only useful once a windowing/runtime shell exists.
+
+**Decision.** Integrate `kira` **0.12.5 with `default-features = false`** behind `gens-audio`: an `AudioEngine` over kira's **MockBackend** whose real mixer/renderer advances deterministically — one `process()` tick = exactly 128 frames (asserted). Sounds are synthesized from raw `Frame`s (`tone` module) so no decoder features and no binary assets are needed. The realtime backend (kira's cpal feature) is a deliberate later addition as a cargo feature on `gens-audio`; nothing in the facade changes that day. Sample-level output capture is not exposed by the mock backend (its output buffer is private), so the honest Phase 3 verification surface is the scheduling/state machine (play/pause/resume/stop/loop/positions) plus synthesized-data contracts.
+
+**Alternatives considered.**
+- *rodio* — rejected: playback-sink oriented, no mixer graph or state introspection to verify.
+- *cpal alone* — rejected: too low-level (device I/O only; we would rebuild mixing, tweens, scheduling).
+- *Enabling cpal now* — rejected: ALSA headers unavailable in CI/sandbox; a build that needs system packages we cannot install contradicts the CI-first rule.
+
+**Risks & mitigations.** Realtime output unproven until the windowing phase → recorded as R-018 with the feature-flag path; kira churn → exact pin + `backend` escape hatch (R-019); mock `sample_rate` defaults to 1 Hz if unset → facade asserts 44.1 kHz default and threads the rate through one constructor.
+
+---
+
+## ADR-0015 — Input: pure action-mapping core; device backends and ECS glue land with windowing
+
+**Status:** Accepted (Phase 3)
+
+**Context.** Gameplay must be written against rebinding-able actions, not raw keys, and the input model must be CI-testable without devices. But no window exists in Phase 3, and bevy_ecs 0.20 (like bevy 0.16+) requires `Resource: Component`, which a generic `InputState<A>` cannot satisfy without forcing user action enums to derive `Component`.
+
+**Decision.** `gens-input` is a **pure, bevy-free crate**: engine-owned `KeyCode`/`MouseButton`/`DeviceEvent` vocabulary (`#[non_exhaustive]`), `InputMap` (actions → bindings, OR-combined, add/unbind/clear), `InputState` fed by a `DeviceEvent` stream with explicit end-of-frame `update()` rotating just-pressed/released edges, axis helpers, and focus-loss `clear_all`. Device backends (winit keyboard/mouse, gilrs gamepads) will translate native events into `DeviceEvent`s when the windowing phase lands — the action model does not change. ECS integration arrives then too, as a newtype resource wrapper (the same pattern `gens-physics::PhysicsResource` already uses), precisely because of the `Resource: Component` constraint.
+
+**Alternatives considered.**
+- *Adopting winit event enums now* — rejected: couples the action model to a windowing library before any window exists.
+- *gilrs gamepads now* — rejected: CI has no gamepad devices; nothing honest to assert.
+- *Generic `Resource` impl via derive on user enums* — rejected: forces `Component` bounds on every game's action enum (leaks bevy into gameplay code).
+
+**Risks & mitigations.** Key vocabulary growth (F-keys, numpad, IME) → `#[non_exhaustive]` + backend translations stay in one module; edge-ordering bugs ("update before query" swallows just-pressed) → documented frame contract in the crate docs, and the physics demo's behavioral tests caught exactly this bug class in practice.

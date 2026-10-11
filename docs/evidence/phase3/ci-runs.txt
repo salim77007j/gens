@@ -1,0 +1,36 @@
+# Phase 3 CI run ledger
+# Branch: phase3-physics-audio-input  (3-OS matrix, ADR-0004)
+
+RUN #40  sha=62c7d79  conclusion=SUCCESS  (branch, final pre-merge)
+  url: https://github.com/salim77007j/gens/actions/runs/38176575188
+  created: 2026-10-11T21:29:27Z
+
+Physics smoke evidence (example physics_hello, 600 steps, scripted replay):
+  windows-latest : trajectory 29290 bytes; verification passed
+                   final_x=7.905011177062988 final_y=0.49992436170578003
+                   peak_y=1.229516744613647
+  ubuntu-latest  : trajectory 29290 bytes; verification passed
+                   final_x=7.905011177062988 final_y=0.49992436170578003
+                   peak_y=1.229516744613647
+  macos-latest   : trajectory 29253 bytes; verification passed
+                   final_x=7.905004501342773 final_y=0.4999241530895233
+                   peak_y=1.2295169830322266
+
+Cross-platform determinism reading (R-013, measured, honest):
+  - x86_64 Windows and x86_64 Ubuntu: BIT-IDENTICAL trajectories.
+  - ARM64 macOS: same behavior to 5 decimals, low float bits differ
+    (rapier f32 SIMD paths on aarch64). Cross-platform bit-identity is
+    NOT claimed by the engine; in-process replay bit-identity is
+    asserted on every push.
+  - In-run two-simulation replay assertion (bit-identical): PASSED on
+    all three operating systems.
+
+GPU smoke evidence (Phase 2 path still enforced):
+  ubuntu-latest : smoke_gpu.png 2084 bytes (lavapipe/Vulkan)
+  windows-latest: smoke_gpu.png 2088 bytes (DX12 software adapter)
+  macos-latest  : (Metal adapter; see run log)
+
+Size gate (ADR-0012): gpu_hello debug binary 179.5 MiB vs 350 MiB limit.
+
+Tests: 112 passed / 0 failed (+ example unit tests inside the count),
+executed on all three operating systems in run #40.

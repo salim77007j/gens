@@ -18,11 +18,13 @@ Likelihood and Impact are scored Low / Medium / High. Status is one of `Open`, `
 | R-010 | macOS runner/toolchain variance (Xcode noise) | Medium | Low | Pin runner image when artifacts depend on it; treat warnings as errors only in our code | Open |
 | R-011 | Binary-size gate threshold unknown before Phase 1 | Low | Low | Placeholder in Phase 0; calibrate with real binaries in Phase 1 and record in DECISIONS | Open |
 | R-012 | Upstream dependency regression blocks a phase | Medium | Medium | Pin versions; patch locally or send upstream PR (Global Rule 10); ROLLBACK_PLAN §5 | Open |
-| R-013 | Cross-platform float determinism (physics/networking) | Medium | High | Fixed timestep, deterministic math discipline, cross-platform vector tests in Phase 3 | Open |
+| R-013 | Cross-platform float determinism (physics/networking) | Medium | High | Fixed timestep, deterministic math discipline, cross-platform vector tests in Phase 3. **Phase 3 note:** in-process determinism delivered and CI-pinned (physics_hello replays 600 steps bit-identically, asserted on every push); cross-OS evidence: x86_64 Windows == x86_64 Linux bit-identical, ARM64 macOS differs in low bits (final_x 7.9050045 vs 7.9050112) — cross-platform bit-identity is NOT claimed and networking must not assume it | Open (narrowed) |
 | R-014 | Headless editor screenshots degrade fidelity (Phase 7) | Medium | Low | Software GL path + egui screenshot capture; document limitations honestly | Open |
 | R-015 | Rust toolchain absent in the current sandbox | High | Medium | rustup 1.99.0 installed in Phase 1 (local gates run); CI installs its own toolchain regardless | Mitigated |
 | R-016 | Design reference misread → editor "copies" instead of "inspires" | Low | Medium | `docs/EDITOR_DESIGN.md` in Phase 7 must document extracted language AND Gens' divergences | Open |
 | R-017 | Non-persistent shell environment between tool calls silently breaks authenticated commands | High | Medium | Every command that authenticates must carry its credential in the SAME invocation; never rely on cross-call state (discovered Phase 0→1, caused the false R-001 diagnosis) | Monitoring |
+| R-018 | Realtime audio output unproven (cpal backend deferred; CI/sandbox lack ALSA headers) | Medium | Low | Mock backend proves the full scheduling/state machine headless (ADR-0014); realtime output is a feature-gated addition with build docs when windowing lands | Open |
+| R-019 | rapier 0.36 / kira 0.12 upstream churn (fast-moving majors) | Medium | Medium | Exact version pins in workspace.dependencies; facade crates confine churn with a `backend` escape hatch; determinism + kinematics tests gate every upgrade | Open |
 
 ## Detail notes for top-severity risks
 
