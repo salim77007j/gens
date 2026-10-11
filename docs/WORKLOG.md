@@ -94,3 +94,7 @@ Rules:
 - WHAT: error and logging modules with 4 unit tests; deps (thiserror/anyhow/tracing/tracing-subscriber) centralized in workspace.dependencies.
 - WHY: Phase 1 task 2 (error handling, logging).
 - EVIDENCE: cargo test -p gens-core green; clippy -D warnings clean; this commit.
+### [phase1] event bus semantics fix (P1-6b)
+- WHAT: Events<E> rewritten to snapshot/take semantics after 5 red tests exposed the double-buffer contract violation; process flaw (heredoc breaking && gates) identified and corrected.
+- WHY: Correctness of the documented event contract; honesty about how the red commit reached the branch.
+- EVIDENCE: 15/15 tests green; commit above; CI on branch will confirm.
