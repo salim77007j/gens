@@ -13,6 +13,8 @@ workspace = true
 
 [dependencies]
 gens-math.workspace = true
+gens-ecs.workspace = true
+bevy_ecs.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 rapier3d.workspace = true
