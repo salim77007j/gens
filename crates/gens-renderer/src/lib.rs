@@ -13,6 +13,7 @@
 //! All shaders are WGSL (ADR-0003). Engine code depends on this crate, never
 //! on wgpu directly (ADR-0001), except through explicitly re-exported types.
 
+pub mod camera;
 pub mod context;
 pub mod mesh;
 pub mod target;

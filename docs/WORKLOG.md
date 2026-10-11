@@ -133,3 +133,13 @@ Rules:
 - WHAT: `gens-renderer/target.rs`: `RenderTarget` (Rgba8UnormSrgb color + Depth24Plus depth, RENDER_ATTACHMENT|COPY_SRC) with GPU->staging copy (`copy_color_to_staging`) and blocking `read_pixels` (map callback via channel, padding stripped). Pure `bytes_per_row` (256B WebGPU row alignment, overflow-checked) and `unpack_padded_rgba` helpers. 4 unit tests + 2 #[ignore] GPU tests (clear round-trip on a 17x9 non-aligned width; zero-size rejection). lib.rs registers the module.
 - WHY: Phase 2 task 2 — ADR-0010's core primitive: the renderer's primary path must produce CPU-readable pixels with no window system.
 - EVIDENCE: cargo test -p gens-renderer 10 passed/0 failed/3 ignored; clippy -D warnings clean; this commit. One API surprise fixed from source reading: BufferSlice::get_mapped_range() takes no range argument in wgpu 30 and returns Result.
+
+### [phase2] vertices, meshes and built-in shapes (P2-3)
+- WHAT: `gens-renderer/mesh.rs`: `Vertex` (pos+color+uv, 36B stride, layout derived beside the struct), `Mesh` (u16 indices, validate() for range/multiple-of-3/65k-cap, to-bytes helpers), built-ins `triangle`/`quad`/`cube` (24 verts, 36 indices, 6 distinct face colors). 7 unit tests; winding verified with real cross products, not by convention. One clippy-1.99 lint fixed (manual_is_multiple_of).
+- WHY: Phase 2 task 3 — draw-call payload + geometry the pipelines in P2-5 consume.
+- EVIDENCE: cargo test -p gens-renderer 17 passed/0 failed/3 ignored; clippy -D warnings clean; this commit.
+
+### [phase2] cameras + camera uniform (P2-4)
+- WHAT: `gens-renderer/camera.rs`: `Camera` (view/proj pair) with `perspective` look-at and `orthographic_2d` (centered origin, +Y up), `uniform::bytes` serializing view_proj to the exact 64-byte WGSL `mat4x4<f32>` uniform block. gens-math gained the camera-constructor facade `look_at_rh`/`perspective_rh`/`orthographic_rh` (engine crates never call glam directly; glam 0.34 moved these to `camera::rh::*`). Projections deliberately emit **WebGPU NDC** (Z in [0,1], Y-up; glam's `directx` flavor) — one depth convention on every wgpu backend, asserted by a new math test. 5 camera tests + 1 new math test. One honest test-authoring fix disclosed: my first ortho depth expectation had the near/far plane sign backwards; the matrix was right, the test was fixed.
+- WHY: Phase 2 task 4 — cameras feed every draw; the depth convention decision is engine law and now pinned by tests.
+- EVIDENCE: gens-math 12/12, gens-renderer 22 passed/3 ignored; clippy -D warnings clean; this commit.

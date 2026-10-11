@@ -152,6 +152,35 @@ pub fn compose_trs(translation: Vec3, rotation: Quat, scale: Vec3) -> Mat4 {
     Mat4::from_scale_rotation_translation(scale, rotation, translation)
 }
 
+/// Right-handed view matrix looking from `eye` at `target`.
+///
+/// View space is Y-up with the camera looking down -Z; `up` should not be
+/// parallel to the view direction. Added for the renderer's cameras so no
+/// engine crate calls glam directly (ADR-0001).
+#[must_use]
+pub fn look_at_rh(eye: Vec3, target: Vec3, up: Vec3) -> Mat4 {
+    glam::camera::rh::view::look_at_mat4(eye, target, up)
+}
+
+/// Right-handed perspective projection: `fov_y_radians` is the vertical
+/// field of view, the frustum spans `[near, far]` (both positive).
+///
+/// Emits **WebGPU NDC** (Z in [0, 1], Y-up) — the convention wgpu expects
+/// on every backend — so all engine rendering shares one depth mapping.
+/// Added for the renderer's cameras (ADR-0001).
+#[must_use]
+pub fn perspective_rh(fov_y_radians: f32, aspect: f32, near: f32, far: f32) -> Mat4 {
+    glam::camera::rh::proj::directx::perspective(fov_y_radians, aspect, near, far)
+}
+
+/// Right-handed orthographic projection over the given view-space box,
+/// emitting **WebGPU NDC** (Z in [0, 1], Y-up). Added for the renderer's
+/// cameras (ADR-0001).
+#[must_use]
+pub fn orthographic_rh(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Mat4 {
+    glam::camera::rh::proj::directx::orthographic(left, right, bottom, top, near, far)
+}
+
 /// Extracts the rotation part of a model matrix as a 3x3 basis.
 #[inline]
 pub fn rotation_submatrix(m: &Mat4) -> Mat3 {
@@ -276,5 +305,43 @@ mod tests {
         let r = rotation_submatrix(&m);
         assert!(eq_eps(r.x_axis.x, 1.0));
         assert!(eq_eps(r.to_cols_array()[3], 0.0)); // no translation leaked
+    }
+
+    #[test]
+    fn projections_emit_webgpu_ndc_depth() {
+        // WebGPU NDC depth is [0, 1]: the near plane maps to 0, the far
+        // plane to 1. All engine projections must share this convention.
+        let (near, far) = (0.5, 100.0);
+        let p = perspective_rh(1.0, 1.0, near, far);
+        let proj_z = |m: Mat4, x: f32, y: f32, z: f32| {
+            let c = m * Vec4::new(x, y, z, 1.0);
+            c.z / c.w
+        };
+        assert!(
+            proj_z(p, 0.0, 0.0, -near).abs() < 1e-5,
+            "near must map to z=0"
+        );
+        assert!(
+            (proj_z(p, 0.0, 0.0, -far) - 1.0).abs() < 1e-4,
+            "far must map to z=1"
+        );
+        let o = orthographic_rh(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+        // With near/far as signed plane distances, the near plane sits at
+        // view z = -near = +1 and the far plane at view z = -far = -1.
+        assert!(
+            proj_z(o, 0.0, 0.0, 1.0).abs() < 1e-6,
+            "ortho near plane must map to z=0"
+        );
+        assert!(
+            (proj_z(o, 0.0, 0.0, -1.0) - 1.0).abs() < 1e-6,
+            "ortho far plane must map to z=1"
+        );
+        // Y stays up: a point above center projects to positive NDC Y.
+        assert!(proj_y_positive(p));
+    }
+
+    fn proj_y_positive(m: Mat4) -> bool {
+        let c = m * Vec4::new(0.0, 1.0, -1.0, 1.0);
+        (c.y / c.w) > 0.0
     }
 }
