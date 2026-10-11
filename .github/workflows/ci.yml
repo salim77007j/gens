@@ -99,16 +99,34 @@ jobs:
         if: steps.detect.outputs.active == 'true'
         run: cargo test --workspace
 
-      - name: Headless smoke test
-        if: steps.detect.outputs.active == 'true' && runner.os == 'Linux'
+      - name: Headless smoke test (engine runs, snapshot produced)
+        if: steps.detect.outputs.active == 'true'
         shell: bash
         run: |
-          # Activated in Phase 1: xvfb-run + engine smoke binary + screenshot artifact.
-          echo "smoke test placeholder (workspace present, smoke binary lands in Phase 1)"
+          # Phase 1 smoke: full headless engine run (loop + ECS + propagation)
+          # producing a deterministic PNG on every platform.
+          cargo run -p gens-runtime --example hello_world -- --frames 60 --out smoke.png
+          test -f smoke.png
+          echo "smoke snapshot: $(wc -c < smoke.png) bytes"
+
+      - name: Upload smoke snapshot artifact
+        if: steps.detect.outputs.active == 'true' && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-snapshot
+          path: smoke.png
 
       - name: Binary size gate
         if: steps.detect.outputs.active == 'true'
         shell: bash
         run: |
-          # Calibrated with real binaries in Phase 1; threshold recorded in docs/DECISIONS.md.
-          echo "size gate placeholder (threshold calibrated in Phase 1)"
+          # Threshold calibrated in Phase 1 (ADR-0009): debug example binary
+          # measured 79.8 MiB on Linux; gate = 2x headroom.
+          LIMIT_BYTES=$((160 * 1024 * 1024))
+          cargo build -p gens-runtime --example hello_world
+          SIZE=$(wc -c < target/debug/examples/hello_world)
+          echo "hello_world debug binary: $SIZE bytes (limit $LIMIT_BYTES)"
+          if [ "$SIZE" -gt "$LIMIT_BYTES" ]; then
+            echo "::error::binary size gate failed: $SIZE > $LIMIT_BYTES"
+            exit 1
+          fi
