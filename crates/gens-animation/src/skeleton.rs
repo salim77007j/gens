@@ -203,6 +203,16 @@ impl LocalPose {
         &self.poses
     }
 
+    /// Resets every joint to the identity pose in place (no reallocation).
+    pub fn set_identity(&mut self) {
+        self.poses.fill(JointPose::IDENTITY);
+    }
+
+    /// Mutable slice access for blend kernels within this crate.
+    pub(crate) fn poses_mut(&mut self) -> &mut [JointPose] {
+        &mut self.poses
+    }
+
     /// Component-wise linear blend `a * w_a + b * w_b` per joint property.
     ///
     /// Rotations blend with [`Quat::slerp`] (shortest arc); weights must be
