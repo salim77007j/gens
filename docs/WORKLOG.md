@@ -118,3 +118,8 @@ Rules:
 - WHAT: PHASE_1_REPORT.md (delivery summary, 53-test scorecard, honest issue log, numbers), README status/roadmap/build updates, RISKS updates (R-015 Mitigated, R-001 Corrected), test+size evidence files.
 - WHY: Phase deliverable - detailed report with evidence; roadmap reflects reality.
 - EVIDENCE: docs/evidence/phase1/{test-output.txt,example-run.txt,hello_world.png}; CI run URLs recorded at merge.
+
+### [phase2] branch opened; governance defect fixed; headless-first ADRs (P2-0)
+- WHAT: Branch `phase2-renderer` opened from verified `main` (f3ac0c4). Fixed a governance defect found in the Phase 2 review: ADR-0009 appeared twice in `docs/DECISIONS.md` (byte-different duplicates from the Phase 1 merge); the second copy removed, dedup disclosed here. Added ADR-0010 (offscreen-first rendering, no surface dependency) and ADR-0011 (CI software-rendering policy: guaranteed lavapipe on Linux, real Metal on macOS, honest best-effort on Windows) to govern the renderer work about to land.
+- WHY: Phase 2 entry point; the honesty rule requires defects in the record to be fixed and disclosed, not papered over; the two new ADRs are load-bearing for every Phase 2 commit that follows.
+- EVIDENCE: this commit; `git log -p docs/DECISIONS.md` shows exactly one ADR-0009 after the fix.
