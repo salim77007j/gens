@@ -5,10 +5,10 @@
 //! - **Zero-cost**: no allocation per event beyond the backing `Vec`, no
 //!   dynamic dispatch per event — the registry lookup happens once per
 //!   frame per event type, then everything is monomorphized.
-//! - **Double-buffered**: `send` writes into the *next* queue while `drain`
-//!   is consuming the *current* queue, so an event emitted while handling
-//!   events is readable on the next drain — never this one (no re-entrancy
-//!   surprises), never lost.
+//! - **Snapshot semantics**: `drain` yields a consistent snapshot of every
+//!   event queued since the *previous drain finished*, in send order.
+//!   Events sent while a drain is in flight are delivered on the next
+//!   drain — never re-entrant, never lost, never delayed a frame.
 //!
 //! The bus lives outside the ECS (engine-level events: lifecycle, input,
 //! audio commands). ECS-internal messaging will use gens-ecs facilities.
@@ -20,50 +20,42 @@ use std::collections::HashMap;
 pub trait Event: Any + Send + Sync {}
 impl<T: Any + Send + Sync> Event for T {}
 
-/// Double-buffered queue for one event type.
+/// Event queue for one type, with snapshot-drain semantics.
 ///
 /// Typical frame flow: systems `send` into it; exactly one consumer `drain`s
 /// it per frame (drain order == send order).
 #[derive(Debug, Default)]
 pub struct Events<E: Event> {
-    current: Vec<E>,
-    next: Vec<E>,
+    queued: Vec<E>,
 }
 
 impl<E: Event> Events<E> {
     /// Empty queue.
     pub fn new() -> Events<E> {
-        Events {
-            current: Vec::new(),
-            next: Vec::new(),
-        }
+        Events { queued: Vec::new() }
     }
 
-    /// Queues an event. Visible to the *next* drain (including if that drain
-    /// happens after this frame's).
+    /// Queues an event for the next drain.
     pub fn send(&mut self, event: E) {
-        self.next.push(event);
+        self.queued.push(event);
     }
 
-    /// Number of events waiting in the current queue.
+    /// Number of events waiting for the next drain.
     pub fn pending(&self) -> usize {
-        self.current.len()
+        self.queued.len()
     }
 
-    /// True when the current queue is empty.
+    /// True when nothing is waiting.
     pub fn is_empty(&self) -> bool {
-        self.current.is_empty()
+        self.queued.is_empty()
     }
 
-    /// Drains the current queue in send order. Events sent during the drain
-    /// land in the next queue and become readable on the next call. The
-    /// returned iterator empties the queue lazily in O(n) total.
+    /// Drains everything queued since the last drain finished, in send
+    /// order, in O(n) total. Events sent while the returned iterator is
+    /// alive land in a fresh queue and are delivered on the next drain;
+    /// events the iterator never yields are retired, not re-delivered.
     pub fn drain(&mut self) -> Drain<E> {
-        // Promote next -> current: what was queued since the last drain is
-        // exactly what this drain must deliver, in send order.
-        std::mem::swap(&mut self.current, &mut self.next);
-        self.next.clear();
-        let mut pending = std::mem::take(&mut self.current);
+        let mut pending = std::mem::take(&mut self.queued);
         pending.reverse(); // pop() then yields in original send order
         Drain { inner: pending }
     }
@@ -186,19 +178,20 @@ mod tests {
     }
 
     #[test]
-    fn sends_during_drain_land_next_frame() {
+    fn sends_during_drain_arrive_on_next_drain() {
         let mut events = Events::<u32>::new();
         events.send(1);
         let mut drained = events.drain();
         assert_eq!(drained.next(), Some(1));
-        // Consumer sends a follow-up while still draining.
+        // Consumer sends a follow-up while still draining: it must not be
+        // re-entrant (cannot appear in the in-flight drain).
+        assert_eq!(drained.next(), None);
         events.send(2);
         drop(drained);
-        // This frame's queue is done...
-        assert_eq!(events.drain().count(), 0);
-        // ...the follow-up arrives on the next drain.
+        // The follow-up is delivered by the next drain, exactly once.
         let next: Vec<u32> = events.drain().collect();
         assert_eq!(next, vec![2]);
+        assert_eq!(events.drain().count(), 0);
     }
 
     #[test]
