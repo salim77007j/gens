@@ -739,6 +739,10 @@ version = "0.1.0"
 [[package]]
 name = "gens-animation"
 version = "0.1.0"
+dependencies = [
+ "gens-math",
+ "thiserror",
+]
 
 [[package]]
 name = "gens-assets"
