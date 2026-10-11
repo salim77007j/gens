@@ -49,6 +49,23 @@ fn checker_rgba() -> ([u8; 16], u32, u32) {
     )
 }
 
+/// A unit quad whose vertex colors carry the sRGB-encoded `rgba` bytes as
+/// LINEAR floats, so the sRGB framebuffer stores exactly `rgba` (the
+/// fragment path is spec-fixed: linear in -> encoded on store).
+fn tinted_quad(rgba: gens_runtime::snapshot::Rgba) -> gens_renderer::mesh::Mesh {
+    let mut m = gens_renderer::mesh::quad();
+    let tint = [
+        gens_renderer::srgb_byte_to_linear(rgba[0]) as f32,
+        gens_renderer::srgb_byte_to_linear(rgba[1]) as f32,
+        gens_renderer::srgb_byte_to_linear(rgba[2]) as f32,
+        1.0,
+    ];
+    for v in &mut m.vertices {
+        v.color = tint;
+    }
+    m
+}
+
 fn main() -> anyhow::Result<()> {
     let mut frames: u32 = 120;
     let mut out = PathBuf::from("gpu_hello.png");
@@ -119,9 +136,11 @@ fn main() -> anyhow::Result<()> {
 
     // --- GPU resources -----------------------------------------------------
     let hero_mesh = GpuMesh::upload(device, &mesh::quad()).context("hero mesh upload")?;
-    let trail_mesh = GpuMesh::upload(device, &mesh::quad()).context("trail mesh upload")?;
+    let trail_cpu = tinted_quad(COLOR_TRAIL);
+    let trail_mesh = GpuMesh::upload(device, &trail_cpu).context("trail mesh upload")?;
+    let background_cpu = tinted_quad(COLOR_BACKGROUND);
     let background_mesh =
-        GpuMesh::upload(device, &mesh::quad()).context("background mesh upload")?;
+        GpuMesh::upload(device, &background_cpu).context("background mesh upload")?;
     let (checker, tw, th) = checker_rgba();
     let hero_texture =
         GpuTexture::from_rgba8(device, queue, tw, th, &checker).context("hero texture upload")?;
