@@ -89,3 +89,8 @@ Rules:
 - WHAT: glam facade + engine utilities + 11 unit tests; one test expectation corrected during authoring (documented in commit message).
 - WHY: Phase 1 task 4.
 - EVIDENCE: cargo test -p gens-math: 11 passed; clippy -D warnings clean; this commit.
+
+### [phase1] gens-core errors + logging (P1-4)
+- WHAT: error and logging modules with 4 unit tests; deps (thiserror/anyhow/tracing/tracing-subscriber) centralized in workspace.dependencies.
+- WHY: Phase 1 task 2 (error handling, logging).
+- EVIDENCE: cargo test -p gens-core green; clippy -D warnings clean; this commit.
