@@ -57,7 +57,12 @@ The Phase-0 workflow self-activated when `Cargo.toml` appeared; this phase added
 
 ## 5. CI runs
 
-Recorded at merge time in `docs/evidence/phase1/ci-runs.txt` (run URLs + conclusions for the final branch run and the `main` merge run). The badge in README reflects the latest `main` status.
+| Run | Branch | SHA | Result |
+|---|---|---|---|
+| [#15](https://github.com/salim77007j/gens/actions/runs/38164205153) | `phase1-core` | ea2bc87 | success — docs-gate + 3 OS gates incl. smoke; `smoke-snapshot` artifact (3741 B) uploaded |
+| [#16](https://github.com/salim77007j/gens/actions/runs/38164378326) | `main` (merge) | a720206 | success — full matrix on the merged state |
+
+Full history: `docs/evidence/phase1/ci-runs.txt`. The README badge tracks `main` live.
 
 ## 6. Decisions & risks delta
 

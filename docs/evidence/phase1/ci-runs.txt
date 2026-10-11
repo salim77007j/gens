@@ -3,4 +3,4 @@
 | run | branch | sha | conclusion | url |
 |---|---|---|---|---|
 | #15 | phase1-core | ea2bc87 | success (docs-gate + 3 OS rust gates incl. smoke + artifact smoke-snapshot 3741B) | https://github.com/salim77007j/gens/actions/runs/38164205153 |
-| (main merge run recorded after merge - see PHASE_1_REPORT section 5) | | | | |
+| #16 | main (merge a720206) | a720206 | success (all gates on 3 OS) | https://github.com/salim77007j/gens/actions/runs/38164378326 |
