@@ -178,3 +178,8 @@ Rules:
 - WHAT: PHASE_2_REPORT.md (delivery summary, honest scorecard, 8-issue log with evidence chain, numbers incl. cross-backend determinism), README status/roadmap/build-docs update (GPU example + --ignored tests documented), RISKS reconciliation (R-004 Phase 2 note, R-002 window disclosure), evidence phase2/{ci-runs.txt ledger with exact run URLs, smoke_cpu.png, smoke_gpu.png}.
 - WHY: Phase deliverable - the report must reconcile WORKLOG/DECISIONS/RISKS and let a reader verify every claim from committed evidence.
 - EVIDENCE: docs/evidence/phase2/*; run #31; this commit.
+
+### [phase2] merge to main + rollback anchor (P2-10)
+- WHAT: phase2-renderer merged to main (--no-ff, merge commit 0f3a7ca); main CI run #33 SUCCESS; annotated tag pre-phase3-safe pushed at the merge. Evidence file records the merge run URL (verified via API).
+- WHY: ADR-0005 - main receives only verified phase results; the pre-phase3-safe tag is the five-minute rollback anchor for Phase 3.
+- EVIDENCE: docs/evidence/phase2/ci-runs.txt MERGE section; tags pre-phase1-safe/pre-phase2-safe/pre-phase3-safe all on origin.

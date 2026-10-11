@@ -51,3 +51,10 @@ run URLs      : #28 https://github.com/salim77007j/gens/actions/runs/38168850605
                 #29 https://github.com/salim77007j/gens/actions/runs/38170332738
                 #30 https://github.com/salim77007j/gens/actions/runs/38170673803
                 #31 https://github.com/salim77007j/gens/actions/runs/38170942161
+
+MERGE TO MAIN
+-------------
+merge commit : 0f3a7ca ("merge: phase 2 - offscreen-first wgpu renderer")
+main CI      : run #33 SUCCESS
+               https://github.com/salim77007j/gens/actions/runs/38171464957
+tag          : pre-phase3-safe -> 0f3a7ca (pushed; `git tag -v`-style anchor)
