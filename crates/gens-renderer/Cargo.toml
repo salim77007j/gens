@@ -1,0 +1,12 @@
+[package]
+name = "gens-renderer"
+description = "wgpu-based renderer targeting Vulkan / DirectX 12 / Metal / WebGPU"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true

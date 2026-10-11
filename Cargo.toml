@@ -1,0 +1,38 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/gens-core",
+    "crates/gens-ecs",
+    "crates/gens-math",
+    "crates/gens-renderer",
+    "crates/gens-physics",
+    "crates/gens-audio",
+    "crates/gens-input",
+    "crates/gens-animation",
+    "crates/gens-ui",
+    "crates/gens-ai",
+    "crates/gens-scripting",
+    "crates/gens-assets",
+    "crates/gens-networking",
+    "crates/gens-editor",
+    "crates/gens-runtime",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+repository = "https://github.com/salim77007j/gens"
+authors = ["The Gens Engine Authors"]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+# Enforced as `-D warnings` by CI and scripts/verify.sh.
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

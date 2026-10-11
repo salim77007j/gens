@@ -1,0 +1,12 @@
+[package]
+name = "gens-ecs"
+description = "Entity component system facade over bevy_ecs with engine components, hierarchy and transform propagation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
