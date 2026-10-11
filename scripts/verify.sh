@@ -8,12 +8,12 @@ cd "$(dirname "$0")/.."
 say() { printf '==> %s\n' "$*"; }
 die() { printf 'VERIFY: FAIL - %s\n' "$*" >&2; exit 1; }
 
-say "[0/6] governance docs present"
+say "[0/8] governance docs present"
 for f in docs/WORKLOG.md docs/DECISIONS.md docs/RISKS.md docs/ROLLBACK_PLAN.md docs/EXPERIMENTS.md; do
   [ -f "$f" ] || die "missing $f"
 done
 
-say "[1/6] secret scan"
+say "[1/8] secret scan"
 if git grep -nE 'gh[pousr]_[A-Za-z0-9]{20,}' -- . 2>/dev/null; then
   die "possible GitHub credential in tracked files (see docs/ROLLBACK_PLAN.md section 5)"
 fi
@@ -24,11 +24,15 @@ if [ ! -f Cargo.toml ]; then
   exit 0
 fi
 
-say "[2/7] cargo fmt";    cargo fmt --all --check
-say "[3/7] cargo clippy"; cargo clippy --workspace --all-targets -- -D warnings
-say "[4/7] cargo build";  cargo build --workspace --all-targets
-say "[5/7] cargo test";   cargo test --workspace
-say "[6/7] GPU smoke (offscreen wgpu render; skips honestly without an adapter)"
+say "[2/8] cargo fmt";    cargo fmt --all --check
+say "[3/8] cargo clippy"; cargo clippy --workspace --all-targets -- -D warnings
+say "[4/8] cargo build";  cargo build --workspace --all-targets
+say "[5/8] cargo test";   cargo test --workspace
+say "[6/8] physics smoke (input -> physics -> ECS replay, CPU-only, deterministic)"
+cargo run -q -p gens-runtime --example physics_hello -- --steps 600 --out /tmp/gens_verify_physics.json
+echo "physics smoke: $(wc -c < /tmp/gens_verify_physics.json) bytes of trajectory evidence"
+
+say "[7/8] GPU smoke (offscreen wgpu render; skips honestly without an adapter)"
 # Local machines may lack a Vulkan driver: --allow-no-gpu makes the
 # absence explicit instead of failing. CI (Linux+macOS) renders for real;
 # see ADR-0011 for the per-OS guarantees.
@@ -38,7 +42,7 @@ if [ -f /tmp/gens_verify_gpu.png ]; then
 else
   echo "gpu smoke: GPU-SKIP (no adapter here; CI renders on Linux/macOS)"
 fi
-say "[7/7] binary size gate"
+say "[8/8] binary size gate"
 # Calibrated in Phase 2 (ADR-0012): gpu_hello debug binary measured
 # 171.3 MiB on Linux x86_64 (wgpu-linked); gate = 2x headroom.
 LIMIT_BYTES=$((350 * 1024 * 1024))
