@@ -1,0 +1,27 @@
+# Gens Engine — gitignore
+# NOTE: Cargo.lock is intentionally NOT ignored — the workspace produces
+# executables, so the lockfile is tracked for reproducible CI builds.
+
+# Rust build artifacts
+/target
+
+# Build/export output used by tools and examples (later phases)
+/dist
+
+# Profiling / benchmark raw output (summarized evidence IS committed)
+/perf-out
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local environment files — never commit secrets
+.env
+.env.*
+*.local
