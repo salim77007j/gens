@@ -85,7 +85,7 @@ impl InstantSource for FixedSource {
 pub struct Clock {
     time_scale: f32,
     raw_delta: Duration,
-    scaled_delta: f32,
+    scaled_delta: f64,
     elapsed_unscaled: f64,
     elapsed_scaled: f64,
     frame: u64,
@@ -108,9 +108,9 @@ impl Clock {
     /// (reversed time is not supported); a zero raw delta is legal.
     pub fn tick(&mut self, raw: Duration) {
         self.raw_delta = raw;
-        self.scaled_delta = (raw.as_secs_f32() * self.time_scale).max(0.0);
+        self.scaled_delta = (raw.as_secs_f64() * self.time_scale as f64).max(0.0);
         self.elapsed_unscaled += raw.as_secs_f64();
-        self.elapsed_scaled += self.scaled_delta as f64;
+        self.elapsed_scaled += self.scaled_delta;
         self.frame += 1;
     }
 
@@ -121,7 +121,7 @@ impl Clock {
 
     /// Last scaled frame delta in seconds (`raw * time_scale`).
     pub fn delta_secs(&self) -> f32 {
-        self.scaled_delta
+        self.scaled_delta as f32
     }
 
     /// Total unscaled time since the clock started.
