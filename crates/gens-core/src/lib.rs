@@ -8,6 +8,7 @@
 //! - `loop_`: fixed-timestep game loop (P1-7)
 
 pub mod error;
+pub mod events;
 pub mod logging;
 pub mod time;
 
