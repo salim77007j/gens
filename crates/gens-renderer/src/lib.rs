@@ -21,7 +21,10 @@ pub mod renderer;
 pub mod resources;
 pub mod target;
 pub mod texture;
+pub mod ui;
 
 pub use context::{AdapterClass, GpuContext};
 pub use renderer::{Draw, Renderer, clear_color_rgba8, srgb_byte_to_linear};
 pub use resources::GpuMesh;
+pub use texture::GpuTexture;
+pub use ui::{UiBatch, UiPipeline, UiVertex};

@@ -846,6 +846,8 @@ name = "gens-ui"
 version = "0.1.0"
 dependencies = [
  "egui",
+ "gens-core",
+ "gens-renderer",
 ]
 
 [[package]]

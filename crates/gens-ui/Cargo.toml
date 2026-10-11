@@ -13,3 +13,5 @@ workspace = true
 
 [dependencies]
 egui.workspace = true
+gens-core.workspace = true
+gens-renderer.workspace = true
