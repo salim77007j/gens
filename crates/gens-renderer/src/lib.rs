@@ -16,6 +16,11 @@
 pub mod camera;
 pub mod context;
 pub mod mesh;
+pub mod pipeline;
+pub mod renderer;
+pub mod resources;
 pub mod target;
 
 pub use context::{AdapterClass, GpuContext};
+pub use renderer::{ColoredDraw, Renderer};
+pub use resources::GpuMesh;
