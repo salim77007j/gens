@@ -34,3 +34,8 @@ Rules:
 - WHAT: Added `docs/evidence/phase0/` — `environment.txt` (platform, toolchain, network, clock), `clone-verify.txt` (remote URL credential-free, empty-repo verification, branch state), `auth-check.txt` (401 diagnosis of the supplied token + mitigation + security note). Second push attempt failed identically; further per-commit push attempts are suspended as futile with the current credential and will be retried once a valid token is provided.
 - WHY: Phase 0 §0.1 — "Save ALL evidence to the repo"; transparency about the credential blocker instead of silent push skipping.
 - EVIDENCE: this commit (C2); auth failure transcripts in `docs/evidence/phase0/auth-check.txt`; commits e194fd0..HEAD are local until credentials arrive.
+
+### [2026-10-11T17:28Z] [phase0] governance docs — DECISIONS + RISKS (C3)
+- WHAT: `docs/DECISIONS.md` with ADR-0001..0008 (workspace layout, bevy_ecs facade, wgpu, CI-first, branch/tag discipline, licensing, governance set, public repo). `docs/RISKS.md` with register R-001..R-016 including detail notes; R-001 marked **Realized** (invalid push credential) with mitigations and user actions.
+- WHY: Phase 0 §0.9 — every architectural decision and risk documented with alternatives and mitigations; §0.4 — the credential blocker is a fact to record, not hide.
+- EVIDENCE: this commit; R-001 evidence at `docs/evidence/phase0/auth-check.txt`.

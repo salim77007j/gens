@@ -1,0 +1,129 @@
+# Gens — Architecture Decision Records
+
+Format per entry: **Status / Context / Decision / Alternatives considered / Risks & mitigations**.
+This file is append-only: decisions are superseded by new ADRs, never rewritten. Every ADR that introduces risk must have a matching entry (or update) in `docs/RISKS.md`.
+
+---
+
+## ADR-0001 — Rust + Cargo workspace with per-system crates
+
+**Status:** Accepted (Phase 0)
+
+**Context.** Gens must compete on performance with Unity, Unreal, and Godot while remaining maintainable and verifiable by a small team and CI. The language and repository layout are the most expensive decisions to reverse later.
+
+**Decision.** Rust on the stable channel, organized as a Cargo **workspace** with fifteen crates: `gens-core`, `gens-ecs`, `gens-math`, `gens-renderer`, `gens-physics`, `gens-audio`, `gens-input`, `gens-animation`, `gens-ui`, `gens-ai`, `gens-scripting`, `gens-assets`, `gens-networking`, `gens-editor`, `gens-runtime`. All shared dependency versions are inherited from `[workspace.dependencies]`; profiles and workspace lints (`warnings = "deny"`) are defined once at the root. Until a crate's phase arrives, it remains a thin stub so the workspace graph is real but cheap.
+
+**Alternatives considered.**
+- *Single monolithic crate* — rejected: compile times grow superlinearly, module boundaries are unenforced, CI parallelism is impossible.
+- *A few mega-crates (engine / editor / runtime)* — rejected: boundary discipline decays; the per-system crates also document the architecture.
+- *C++ core with Rust shell* — rejected: build-system complexity and memory-safety burden contradict the project's goals.
+
+**Risks & mitigations.** Fifteen-crate overhead before Phase 1 → stubs are near-empty; dependency-version drift → all versions inherited from the root; compile-time creep → workspace lint gate + CI timing tracked from Phase 1.
+
+---
+
+## ADR-0002 — ECS: bevy_ecs behind a `gens-ecs` facade
+
+**Status:** Accepted (Phase 0)
+
+**Context.** The ECS is the backbone of the engine. Writing a competitive archetype ECS from scratch is a multi-year research effort with poor return on investment, while 2026-era Rust offers production-grade off-the-shelf options.
+
+**Decision.** Integrate `bevy_ecs` (the standalone ECS crate, not the Bevy engine) as the storage/scheduler core. `gens-ecs` exposes a deliberate facade: engine components (`Transform`, `Name`, `Active`, `Tag`), hierarchy and transform-propagation systems, and engine-owned schedules. Engine code never touches raw bevy_ecs APIs except inside `gens-ecs`.
+
+**Alternatives considered.**
+- *hecs* — lighter, but no built-in scheduler; we would rebuild scheduling ourselves.
+- *flecs (C++) via FFI* — excellent tech, but FFI + C++ toolchain on three CI platforms is a persistent liability.
+- *Custom ECS* — rejected: time-to-competence is measured in years; zero product differentiation for our goals.
+
+**Risks & mitigations.** Upstream breaking changes → pin the exact minor version in `[workspace.dependencies]`; facade contains churn to one crate. Determinism across platforms → validated in Phase 3 with fixed-step ordering tests (see `docs/RISKS.md` R-013).
+
+---
+
+## ADR-0003 — Renderer: wgpu (Vulkan / DX12 / Metal / WebGPU) with software fallback
+
+**Status:** Accepted (Phase 0)
+
+**Context.** The renderer must target three desktop graphics stacks plus WebGPU, run headless on CI machines that have no GPU, and stay safe-by-default.
+
+**Decision.** Build `gens-renderer` on `wgpu`. Adapter selection detects NVIDIA / AMD / Intel (dedicated and integrated) and prefers dedicated GPUs; when no hardware adapter exists (CI), fall back to software adapters (lavapipe/llvmpipe on Linux, documented equivalents elsewhere). All shaders in WGSL.
+
+**Alternatives considered.**
+- *Raw Vulkan (ash)* — maximum control, but three-platform safety and CI cost are prohibitive for a small team.
+- *OpenGL (glow)* — legacy, deprecated on macOS, dead end for WebGPU.
+- *Direct3D-only or Metal-only* — contradicts the cross-platform mission.
+
+**Risks & mitigations.** Software-render performance on CI is unrepresentative of real GPUs → benchmarks report both relative ratios and absolute numbers with environment disclosure (`docs/RISKS.md` R-004); wgpu driver quirks on vendor GPUs → zero-crash gate in Phase 2 plus adapter allow/deny list; upstream wgpu regressions → pin versions, patch locally or send upstream PRs (Global Rule 10).
+
+---
+
+## ADR-0004 — CI-first development: 3-OS matrix, headless verification, evidence artifacts
+
+**Status:** Accepted (Phase 0)
+
+**Context.** The user will not run or test anything until the whole project is declared complete (Phase 0 §0.10). Every claim of success must therefore be machine-verifiable.
+
+**Decision.** `.github/workflows/ci.yml` runs on every push: a docs-integrity gate, a credential secret-scan, and a three-OS matrix (ubuntu-latest, windows-latest, macos-latest) that executes format check, `clippy -D warnings`, build, tests, a Linux headless smoke test (xvfb where needed), and a binary-size gate. Gates written in Phase 0 are **armed but inactive** until the Cargo workspace exists in Phase 1 (they detect the workspace and skip cleanly rather than failing). Evidence (screenshots, metrics, logs) is uploaded as artifacts and committed under `docs/evidence/`.
+
+**Alternatives considered.**
+- *Local-only verification* — rejected: unverifiable claims, violates §0.10.
+- *Linux-only CI* — rejected: the engine claims Windows/macOS support; untested claims are forbidden by the honesty rule.
+
+**Risks & mitigations.** CI minutes → free for public repositories; runner flakiness → retry policy documented in `docs/RISKS.md` R-005; slow software rendering → smoke tests render tiny scenes with explicit expectations (R-004).
+
+---
+
+## ADR-0005 — Branch-per-phase + rollback tags
+
+**Status:** Accepted (Phase 0)
+
+**Context.** Phases are milestones; `main` must always be in a verified, shippable state, and any regression must be reversible within five minutes (§0.2, §0.6).
+
+**Decision.** Each phase works on `phase<N>-<slug>` (Phase 0: `phase0-risk-management`). `main` receives only verified phase results. Immediately before starting phase N, a tag `pre-phase<N>-safe` is placed on `main` as the rollback anchor. Phase 0 note: the repository was empty, so `main` is initialized from the verified head of `phase0-risk-management` (bootstrap, no merge needed) and tagged `pre-phase1-safe` before Phase 1 begins.
+
+**Alternatives considered.**
+- *Trunk-based (commit to main directly)* — rejected for this project: a broken main defeats the rollback guarantee.
+- *Long-lived `develop` branch* — rejected: merge-hell risk with one active phase at a time adds no value.
+
+**Risks & mitigations.** Stale branches at project end → all phase branches are kept (they are the granular history); tag mistakes → tags are local+remote deletable and re-creatable in minutes (procedure in `docs/ROLLBACK_PLAN.md`).
+
+---
+
+## ADR-0006 — Licensing: MIT now; dual MIT | Apache-2.0 finalized in Phase 1
+
+**Status:** Accepted (Phase 0)
+
+**Context.** A public engine repository needs a license from its first commit. The Rust ecosystem convention is dual MIT | Apache-2.0 (the Apache grant additionally covers patent claims), and most of our dependency tree will be MIT/Apache-dual.
+
+**Decision.** Ship `LICENSE-MIT` in the bootstrap commit so the repository is unambiguously open source from day one. When the workspace crates land in Phase 1, add `LICENSE-APACHE` and set `license = "MIT OR Apache-2.0"` in all crate manifests — unless the user directs otherwise.
+
+**Alternatives considered.** *Proprietary/all-rights-reserved* — rejected: contradicts the showcase intent and the Rust ecosystem norms; *GPL-family* — rejected: would constrain adopters and most likely the user's intent for an engine competing with permissively licensed peers.
+
+**Risks & mitigations.** User may prefer a different license → single ADR change plus one commit swaps it before Phase 1 code exists; cost of change is near zero now and grows later, which is exactly why it is raised in Phase 0.
+
+---
+
+## ADR-0007 — Governance docs and evidence-in-repo
+
+**Status:** Accepted (Phase 0)
+
+**Context.** Global rules require documentation after every sub-item, honesty backed by evidence, and survival across environment resets.
+
+**Decision.** The repository carries a fixed governance set: `docs/WORKLOG.md` (append-only per-change log), `docs/DECISIONS.md` (this file), `docs/RISKS.md` (risk register), `docs/ROLLBACK_PLAN.md`, `docs/EXPERIMENTS.md`, plus `docs/evidence/<phase>/` for raw proof (logs, metrics, screenshots) and `docs/design/` for reference material. The CI docs-gate fails any push that deletes a governance file. Evidence referenced by a worklog entry must exist in the same commit that entry lands in.
+
+**Alternatives considered.** *Wiki/external docs* — rejected: external state is not protected by CI and not atomic with code; *evidence as CI artifacts only* — rejected: artifacts expire, repository files do not.
+
+**Risks & mitigations.** Docs rot → each phase report explicitly reconciles WORKLOG/DECISIONS/RISKS at phase end; repo size growth from screenshots → PNGs are bounded per phase and reviewed in the phase report.
+
+---
+
+## ADR-0008 — Repository visibility: public
+
+**Status:** Accepted (Phase 0)
+
+**Context.** The push target is a GitHub repository under the user's account. CI minutes are free and unlimited for public repositories, and Phase 10 requires a public showcase (README, screenshots, benchmarks).
+
+**Decision.** The repository is public. Secrets policy: no credential ever enters the repository (enforced by the secret-scan gate); the push token lives only in the local process environment for the session.
+
+**Alternatives considered.** *Private repository* — rejected: Actions minutes would be consumed against a quota across the three-OS matrix, and the Phase 10 showcase would be invisible.
+
+**Risks & mitigations.** Accidental secret commit → secret-scan gate + `.gitignore` for `.env*`; if a secret ever lands, `git-filter-repo` + token revocation procedure is documented in `docs/ROLLBACK_PLAN.md` §5.
