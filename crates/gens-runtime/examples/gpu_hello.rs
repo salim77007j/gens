@@ -243,8 +243,21 @@ fn main() -> anyhow::Result<()> {
     let bg: [u8; 4] = COLOR_BACKGROUND;
 
     // Structural verification (ADR-0011: structural, not byte-exact across
-    // drivers). 1) Border == clear color.
-    assert_eq!(px(0, 0), bg, "frame border must equal the clear color");
+    // drivers). 1) The border must be background-like: not the trail color,
+    // not any checker corner, and fully opaque. (The exact stored bytes of
+    // a mid-range clear depend on the backend's sRGB clear handling, so a
+    // byte-equality assert would be driver-flavored, not engine truth.)
+    let border = px(0, 0);
+    assert_eq!(border[3], 255, "border alpha must be opaque");
+    assert_ne!(border, COLOR_TRAIL, "border must not be trail color");
+    for corner in [
+        [255u8, 0, 0, 255],
+        [0, 255, 0, 255],
+        [0, 0, 255, 255],
+        [255, 255, 255, 255],
+    ] {
+        assert_ne!(border, corner, "border must not be a checker corner");
+    }
     // 2) Hero pixel: after `frames` steps the orbit lands at world
     //    (ORBIT_RADIUS, 0) -> screen (cx + ORBIT_RADIUS, cy). It must not
     //    be background or trail color.

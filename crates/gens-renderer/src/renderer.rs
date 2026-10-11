@@ -250,7 +250,17 @@ mod tests {
 
     fn renderer() -> Renderer {
         let ctx = crate::context::GpuContext::new().expect("GPU adapter (ADR-0011)");
-        Renderer::new(ctx, 64, 64).expect("renderer")
+        let r = Renderer::new(ctx, 64, 64).expect("renderer");
+        eprintln!("gpu test adapter: {}", r.context().adapter_summary());
+        r
+    }
+
+    /// 2x2 ortho camera on the 64x64 target: 1 world unit = 32 pixels, so
+    /// the unit shapes (plus/minus 0.5) span 32 pixels and the sample
+    /// points below land well inside/outside them.
+    fn set_unit_camera(r: &Renderer, queue: &Queue) {
+        let cam = crate::camera::Camera::orthographic_2d(2.0, 2.0);
+        r.set_camera(queue, cam.view_proj());
     }
 
     /// Full pipeline check: a colored triangle renders with interpolated
@@ -263,7 +273,7 @@ mod tests {
         let r = renderer();
         let device = r.context().device();
         let queue = r.context().queue();
-        r.set_camera_2d(queue);
+        set_unit_camera(&r, queue);
         r.set_model(queue, 0, Mat4::IDENTITY).unwrap();
         let tri = GpuMesh::upload(device, &mesh::triangle()).unwrap();
 
@@ -308,7 +318,7 @@ mod tests {
         let r = renderer();
         let device = r.context().device();
         let queue = r.context().queue();
-        r.set_camera_2d(queue);
+        set_unit_camera(&r, queue);
 
         let mut blue_quad: Mesh = mesh::quad();
         for v in &mut blue_quad.vertices {
@@ -385,7 +395,7 @@ mod tests {
         let r = renderer();
         let device = r.context().device();
         let queue = r.context().queue();
-        r.set_camera_2d(queue);
+        set_unit_camera(&r, queue);
         r.set_model(queue, 0, Mat4::IDENTITY).unwrap();
 
         // Row 0 (v=0, top): red, green. Row 1 (v=1, bottom): blue, white.
@@ -430,30 +440,79 @@ mod tests {
     }
 }
 
-/// Builds a clear color from sRGB-encoded `RGBA8` bytes for a
-/// `Rgba8UnormSrgb` framebuffer. Exact for every component value: u8/255
-/// is already the encoded fraction the format stores. Engine code uses
-/// this instead of constructing `wgpu::Color` itself (ADR-0001).
+/// Builds a clear color that will store as the sRGB-encoded `RGBA8` bytes
+/// given, for an `Rgba8UnormSrgb` framebuffer.
+///
+/// WebGPU semantics: `LoadOp::Clear` values for `*unorm-srgb` targets are
+/// **linear** floats that the hardware encodes on store (verified on the
+/// DX12 software adapter in CI — a raw u8/255 clear came back sRGB-scaled).
+/// This helper therefore decodes the caller's encoded bytes to linear so
+/// the framebuffer ends up holding exactly `rgba8`. Engine code uses this
+/// instead of constructing `wgpu::Color` itself (ADR-0001).
 #[must_use]
 pub fn clear_color_rgba8(rgba8: [u8; 4]) -> wgpu::Color {
     wgpu::Color {
-        r: f64::from(rgba8[0]) / 255.0,
-        g: f64::from(rgba8[1]) / 255.0,
-        b: f64::from(rgba8[2]) / 255.0,
+        r: srgb_byte_to_linear(rgba8[0]),
+        g: srgb_byte_to_linear(rgba8[1]),
+        b: srgb_byte_to_linear(rgba8[2]),
         a: f64::from(rgba8[3]) / 255.0,
+    }
+}
+
+/// Decodes one sRGB-encoded byte to its linear-space fraction (f64, the
+/// precision `wgpu::Color` carries).
+#[must_use]
+pub fn srgb_byte_to_linear(byte: u8) -> f64 {
+    let c = f64::from(byte) / 255.0;
+    if c <= 0.040_45 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
     }
 }
 
 #[cfg(test)]
 mod clear_color_tests {
-    use super::clear_color_rgba8;
+    use super::{clear_color_rgba8, srgb_byte_to_linear};
 
     #[test]
-    fn clear_color_conversion_is_exact() {
+    fn clear_color_round_trips_through_srgb() {
+        // Endpoints are identity in both spaces.
+        let black = clear_color_rgba8([0, 0, 0, 255]);
+        assert_eq!((black.r, black.g, black.b, black.a), (0.0, 0.0, 0.0, 1.0));
+        let white = clear_color_rgba8([255, 255, 255, 255]);
+        assert_eq!((white.r, white.g, white.b, white.a), (1.0, 1.0, 1.0, 1.0));
+        // Mid-range: the clear value must be the LINEAR decode of the byte,
+        // so the hardware re-encodes to exactly that byte on store.
         let c = clear_color_rgba8([24, 26, 33, 255]);
-        assert_eq!(c.r, 24.0 / 255.0);
-        assert_eq!(c.g, 26.0 / 255.0);
-        assert_eq!(c.b, 33.0 / 255.0);
-        assert_eq!(c.a, 1.0);
+        assert_eq!(c.r, srgb_byte_to_linear(24));
+        assert_eq!(c.g, srgb_byte_to_linear(26));
+        assert_eq!(c.b, srgb_byte_to_linear(33));
+        // The decode is the exact inverse of the encode the HW applies.
+        let encode = |l: f64| -> f64 {
+            if l <= 0.003_130_8 {
+                l * 12.92
+            } else {
+                1.055 * l.powf(1.0 / 2.4) - 0.055
+            }
+        };
+        assert!(
+            (encode(c.r) * 255.0 - 24.0).abs() < 0.5,
+            "r {} -> {}",
+            c.r,
+            encode(c.r) * 255.0
+        );
+        assert!(
+            (encode(c.g) * 255.0 - 26.0).abs() < 0.5,
+            "g {} -> {}",
+            c.g,
+            encode(c.g) * 255.0
+        );
+        assert!(
+            (encode(c.b) * 255.0 - 33.0).abs() < 0.5,
+            "b {} -> {}",
+            c.b,
+            encode(c.b) * 255.0
+        );
     }
 }
