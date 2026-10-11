@@ -13,4 +13,6 @@ pub mod game_loop;
 pub mod logging;
 pub mod time;
 
+/// The anyhow crate, re-exported for game code (see `error` module docs).
+pub use anyhow;
 pub use error::{EngineError, Result};

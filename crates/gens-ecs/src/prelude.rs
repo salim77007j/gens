@@ -13,6 +13,10 @@ pub use bevy_ecs::prelude::*;
 pub use gens_math::{Mat3, Mat4, Quat, Vec2, Vec3, Vec4, quat, vec2, vec3};
 // Engine components and APIs. Explicit imports shadow any upstream glob
 // (e.g. bevy's own Name) so the gens facade always wins.
+//
+// CAVEAT: the bevy_ecs prelude includes `ContextExt` (a `context` method on
+// Option/Result) which collides with `anyhow::Context`. Files that use both
+// this glob and anyhow should import gens_ecs items explicitly instead.
 pub use crate::components::{Active, Name, Tag, Transform, WorldTransform};
 pub use crate::hierarchy::{EngineSchedules, attach_children, detach_from_parent};
 pub use crate::propagation::transform_propagation_system;

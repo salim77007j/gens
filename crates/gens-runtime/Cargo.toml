@@ -10,3 +10,9 @@ authors.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+gens-core.workspace = true
+image.workspace = true
+gens-ecs.workspace = true
+gens-math.workspace = true

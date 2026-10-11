@@ -1,3 +1,8 @@
 //! Exported-game runtime shell.
 //!
-//! Stub crate — implemented in Phase 1+ (see README roadmap).
+//! Phase 1 contents: [`snapshot`] — the CPU rasterizer that produces
+//! deterministic scene PNGs for headless runs and CI evidence. The full
+//! runtime (windowing, audio output, export pipeline) arrives in later
+//! phases.
+
+pub mod snapshot;
