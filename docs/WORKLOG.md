@@ -69,3 +69,8 @@ Rules:
 - WHAT: Earlier entries carried hand-written timestamps that drifted ahead of the real clock (up to +13 minutes). All entry timestamps corrected to the exact `git log` commit times, which are the authoritative source.
 - WHY: Honesty rule — a process log whose times contradict git history is defective evidence; fixing immediately and disclosing the fix beats silently leaving it.
 - EVIDENCE: `git log --format='%h %ad %s' --date=iso` matches every timestamp in this file after this commit.
+
+### [phase0] phase report + finalized drill evidence (C10)
+- WHAT: `docs/PHASE_0_REPORT.md` (requirement map §0.1–0.10, commit ledger, CI status, drill results, honest exit-criteria scorecard, credential-blocker diagnosis + 5-minute resume procedure) and finalized `docs/evidence/phase0/rollback-drill.txt`.
+- WHY: Phase deliverable — a detailed phase report with before/after evidence; the report deliberately does NOT claim CI-green or pushed state while R-001 blocks them.
+- EVIDENCE: this commit; phase status "COMPLETE LOCALLY — PUSH BLOCKED BY INVALID CREDENTIAL" per report §8/§9/§10.

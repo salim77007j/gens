@@ -1,0 +1,23 @@
+# Rollback Drill — Phase 0 (ROLLBACK_PLAN scenario #1)
+
+- Executed: 2026-10-11T17:23:07Z (UTC)
+- Scenario: unwanted commit lands on a phase branch; revert-first per §0.3.
+
+## Transcript
+
+| Step | Command | Commit | Wall clock (UTC) |
+|---|---|---|---|
+| T0 | drill start | — | 17:23:07Z (epoch 1791739387) |
+| 1 | `git commit` (marker) | 62d5ff1 | 17:23:07Z |
+| 2 | `git revert --no-edit HEAD` | 90096b8 | 17:23:07Z |
+| T1 | drill end, tree clean | — | 17:23:07Z (epoch 1791739387) |
+
+## Result
+
+- Local rollback elapsed time: **< 1 second** (well inside the 5-minute budget of docs/ROLLBACK_PLAN.md).
+- Tree state after drill: clean (`git status --short` empty), history shows both the marker and its revert — forward-moving history, no rewriting.
+- Push component: pending — the supplied credential is invalid (see `auth-check.txt` and `docs/RISKS.md` R-001). The marker + revert commits are part of the branch history and will be pushed as-is in the first successful push, at which point this drill is fully published to the remote.
+
+## Verdict
+
+Scenario #1 (bad commit on phase branch) rollback is proven locally. Scenarios #2 (branch reset), #3 (main revert), #4 (re-clone) will be exercised at phase boundaries as they occur; each is a documented 2-5 command procedure with a time budget in docs/ROLLBACK_PLAN.md.
