@@ -98,3 +98,7 @@ Rules:
 - WHAT: Events<E> rewritten to snapshot/take semantics after 5 red tests exposed the double-buffer contract violation; process flaw (heredoc breaking && gates) identified and corrected.
 - WHY: Correctness of the documented event contract; honesty about how the red commit reached the branch.
 - EVIDENCE: 15/15 tests green; commit above; CI on branch will confirm.
+### [phase1] fixed-timestep game loop (P1-7)
+- WHAT: advance() pure math + GameLoop driver, 7 tests (22 total in gens-core); two authoring fixes documented in the commit (nanos truncation, const fn).
+- WHY: Phase 1 task 2 (fixed-timestep loop, variable render, catch-up guard).
+- EVIDENCE: 22/22 gens-core tests green; clippy/fmt clean; this commit.
