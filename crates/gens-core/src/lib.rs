@@ -9,5 +9,6 @@
 
 pub mod error;
 pub mod logging;
+pub mod time;
 
 pub use error::{EngineError, Result};
