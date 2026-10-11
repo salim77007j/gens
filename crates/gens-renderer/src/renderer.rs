@@ -19,17 +19,35 @@ use wgpu::Queue;
 
 use crate::camera;
 use crate::context::GpuContext;
-use crate::pipeline::{ColoredPipeline, DYNAMIC_OFFSET_ALIGNMENT, model_slot_offset};
+use crate::pipeline::{
+    ColoredPipeline, DYNAMIC_OFFSET_ALIGNMENT, TexturedPipeline, model_slot_offset,
+};
 use crate::resources::{GpuMesh, ModelUniforms};
 use crate::target::RenderTarget;
+use crate::texture::GpuTexture;
 
-/// One colored draw: an uploaded mesh positioned by model slot.
+/// One draw command: an uploaded mesh positioned by model slot, rendered
+/// by the colored or the textured pipeline.
 #[derive(Clone, Copy, Debug)]
-pub struct ColoredDraw<'a> {
-    /// Uploaded mesh (vertex + index buffers).
-    pub mesh: &'a GpuMesh,
-    /// Model-uniform slot holding this draw's model matrix.
-    pub slot: u32,
+pub enum Draw<'a> {
+    /// Unlit vertex-colored mesh (`shaders/colored.wgsl`).
+    Colored {
+        /// Uploaded mesh.
+        mesh: &'a GpuMesh,
+        /// Model-uniform slot.
+        slot: u32,
+    },
+    /// Texture-sampled mesh; fragment = vertex color x texture
+    /// (`shaders/textured.wgsl`). The bind group is created per draw for
+    /// now — fine at Phase 2 scene sizes, documented honestly.
+    Textured {
+        /// Uploaded mesh.
+        mesh: &'a GpuMesh,
+        /// Model-uniform slot.
+        slot: u32,
+        /// Sampled texture.
+        texture: &'a GpuTexture,
+    },
 }
 
 /// Owns the full offscreen render state.
@@ -37,6 +55,7 @@ pub struct Renderer {
     ctx: GpuContext,
     target: RenderTarget,
     colored: ColoredPipeline,
+    textured: TexturedPipeline,
     camera_buf: wgpu::Buffer,
     camera_bg: wgpu::BindGroup,
     models: ModelUniforms,
@@ -52,6 +71,7 @@ impl Renderer {
         let device = ctx.device();
         let target = RenderTarget::new(device, width, height)?;
         let colored = ColoredPipeline::new(device, wgpu::TextureFormat::Rgba8UnormSrgb)?;
+        let textured = TexturedPipeline::new(device, wgpu::TextureFormat::Rgba8UnormSrgb)?;
 
         let camera_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("gens-camera-uniform"),
@@ -79,6 +99,7 @@ impl Renderer {
             ctx,
             target,
             colored,
+            textured,
             camera_buf,
             camera_bg,
             models,
@@ -128,7 +149,7 @@ impl Renderer {
     ///
     /// # Errors
     /// Returns [`EngineError`] on slot overflow or readback failure.
-    pub fn draw_and_read(&self, clear: wgpu::Color, draws: &[ColoredDraw<'_>]) -> Result<Vec<u8>> {
+    pub fn draw_and_read(&self, clear: wgpu::Color, draws: &[Draw<'_>]) -> Result<Vec<u8>> {
         let device = self.ctx.device();
         let queue = self.ctx.queue();
 
@@ -159,13 +180,37 @@ impl Renderer {
                 occlusion_query_set: None,
                 multiview_mask: None,
             });
-            pass.set_pipeline(self.colored.raw());
             pass.set_bind_group(0, &self.camera_bg, &[]);
+            // Bind groups for textured draws live for this call only; the
+            // encoder copies what it needs at submit time.
+            let mut temp_groups: Vec<wgpu::BindGroup> = Vec::new();
             for draw in draws {
-                let offset = model_slot_offset(draw.slot, self.models.capacity())?;
-                pass.set_bind_group(1, self.models.bind_group(), &[offset]);
-                draw.mesh.bind_to(&mut pass);
-                draw.mesh.draw(&mut pass);
+                match *draw {
+                    Draw::Colored { mesh, slot } => {
+                        pass.set_pipeline(self.colored.raw());
+                        let offset = model_slot_offset(slot, self.models.capacity())?;
+                        pass.set_bind_group(1, self.models.bind_group(), &[offset]);
+                        mesh.bind_to(&mut pass);
+                        mesh.draw(&mut pass);
+                    }
+                    Draw::Textured {
+                        mesh,
+                        slot,
+                        texture,
+                    } => {
+                        pass.set_pipeline(self.textured.raw());
+                        let offset = model_slot_offset(slot, self.models.capacity())?;
+                        let group = self.textured.create_draw_bind_group(
+                            self.ctx.device(),
+                            self.models.buffer(),
+                            texture,
+                        );
+                        temp_groups.push(group);
+                        pass.set_bind_group(1, temp_groups.last().expect("just pushed"), &[offset]);
+                        mesh.bind_to(&mut pass);
+                        mesh.draw(&mut pass);
+                    }
+                }
             }
         }
         self.target.copy_color_to_staging(&mut encoder);
@@ -225,7 +270,7 @@ mod tests {
         let px = r
             .draw_and_read(
                 wgpu::Color::WHITE,
-                &[ColoredDraw {
+                &[Draw::Colored {
                     mesh: &tri,
                     slot: 0,
                 }],
@@ -291,11 +336,11 @@ mod tests {
         // Order A: near submitted first, far second.
         set_models(0, 1);
         let draws_a = [
-            ColoredDraw {
+            Draw::Colored {
                 mesh: &quad,
                 slot: 0,
             }, // near
-            ColoredDraw {
+            Draw::Colored {
                 mesh: &quad,
                 slot: 1,
             }, // far
@@ -306,11 +351,11 @@ mod tests {
         // draw order. Depth, not submission order, must decide the pixels.
         set_models(0, 1);
         let draws_b = [
-            ColoredDraw {
+            Draw::Colored {
                 mesh: &quad,
                 slot: 1,
             }, // far
-            ColoredDraw {
+            Draw::Colored {
                 mesh: &quad,
                 slot: 0,
             }, // near
@@ -328,5 +373,59 @@ mod tests {
         assert_eq!(at(&px_near_first, 46, 32), [0, 0, 255, 255]);
         // Left of the quad: background black.
         assert_eq!(at(&px_near_first, 4, 32), [0, 0, 0, 255]);
+    }
+
+    /// Textured pipeline: a 2x2 checker (red/green top row, blue/white
+    /// bottom row) on a unit quad — corner pixels must sample the matching
+    /// texel exactly (endpoint colors), validating UV orientation, sampler
+    /// and the combined color*texture output.
+    #[test]
+    #[ignore = "requires a GPU adapter (real or software)"]
+    fn textured_quad_samples_texels_at_corners() {
+        let r = renderer();
+        let device = r.context().device();
+        let queue = r.context().queue();
+        r.set_camera_2d(queue);
+        r.set_model(queue, 0, Mat4::IDENTITY).unwrap();
+
+        // Row 0 (v=0, top): red, green. Row 1 (v=1, bottom): blue, white.
+        let tex = GpuTexture::from_rgba8(
+            device,
+            queue,
+            2,
+            2,
+            &[
+                255, 0, 0, 255, 0, 255, 0, 255, // top row
+                0, 0, 255, 255, 255, 255, 255, 255, // bottom row
+            ],
+        )
+        .unwrap();
+        let quad = GpuMesh::upload(device, &mesh::quad()).unwrap();
+
+        let px = r
+            .draw_and_read(
+                wgpu::Color::BLACK,
+                &[Draw::Textured {
+                    mesh: &quad,
+                    slot: 0,
+                    texture: &tex,
+                }],
+            )
+            .unwrap();
+        let at = |x: u32, y: u32| {
+            let i = ((y * 64 + x) * 4) as usize;
+            [px[i], px[i + 1], px[i + 2], px[i + 3]]
+        };
+        // Quad occupies the middle 32x32 block of the 64x64 target.
+        assert_eq!(at(20, 20), [255, 0, 0, 255], "top-left texel (red)");
+        assert_eq!(at(44, 20), [0, 255, 0, 255], "top-right texel (green)");
+        assert_eq!(at(20, 44), [0, 0, 255, 255], "bottom-left texel (blue)");
+        assert_eq!(
+            at(44, 44),
+            [255, 255, 255, 255],
+            "bottom-right texel (white)"
+        );
+        // Outside the quad: black clear.
+        assert_eq!(at(4, 32), [0, 0, 0, 255]);
     }
 }

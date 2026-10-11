@@ -140,6 +140,13 @@ impl ModelUniforms {
         &self.bind_group
     }
 
+    /// The underlying uniform buffer (textured pipelines combine it with a
+    /// texture into one group-1 bind group).
+    #[must_use]
+    pub(crate) fn buffer(&self) -> &wgpu::Buffer {
+        &self.buffer
+    }
+
     /// Byte offset for `slot`, for `set_bind_group(1, bg, &[offset])`.
     ///
     /// # Errors

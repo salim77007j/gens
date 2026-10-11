@@ -153,3 +153,175 @@ impl ColoredPipeline {
         &self.model_bgl
     }
 }
+
+/// The textured-mesh pipeline (`shaders/textured.wgsl`).
+///
+/// Group 1 combines the shared model-uniform ring with a sampler and a
+/// texture, so one bind group exists per (texture, model-ring) pair. The
+/// fragment output is `vertex_color * texture_sample` — white vertex
+/// colors mean "untinted".
+pub struct TexturedPipeline {
+    pipeline: RenderPipeline,
+    camera_bgl: BindGroupLayout,
+    draw_bgl: BindGroupLayout,
+}
+
+impl TexturedPipeline {
+    /// WGSL source, compiled in from `shaders/textured.wgsl`.
+    pub const WGSL: &'static str = include_str!("../shaders/textured.wgsl");
+
+    /// Compiles the pipeline for an `Rgba8UnormSrgb` color target.
+    ///
+    /// # Errors
+    /// Returns [`EngineError`] if shader compilation or pipeline creation
+    /// fails.
+    pub fn new(device: &Device, color_format: TextureFormat) -> Result<TexturedPipeline> {
+        let module = device.create_shader_module(ShaderModuleDescriptor {
+            label: Some("gens-textured-shader"),
+            source: ShaderSource::Wgsl(Self::WGSL.into()),
+        });
+
+        let camera_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("gens-camera-bgl-textured"),
+            entries: &[BindGroupLayoutEntry {
+                binding: 0,
+                visibility: ShaderStages::VERTEX,
+                ty: BindingType::Buffer {
+                    ty: BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: BufferSize::new(MAT4_UNIFORM_SIZE),
+                },
+                count: None,
+            }],
+        });
+
+        let draw_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("gens-textured-draw-bgl"),
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::VERTEX,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: true,
+                        min_binding_size: BufferSize::new(MAT4_UNIFORM_SIZE),
+                    },
+                    count: None,
+                },
+                BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+                BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+            ],
+        });
+
+        let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: Some("gens-textured-layout"),
+            bind_group_layouts: &[Some(&camera_bgl), Some(&draw_bgl)],
+            immediate_size: 0,
+        });
+
+        let vertex_layout = crate::mesh::Vertex::layout();
+        let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("gens-textured-pipeline"),
+            layout: Some(&layout),
+            vertex: VertexState {
+                module: &module,
+                entry_point: Some("vs_main"),
+                compilation_options: Default::default(),
+                buffers: &[Some(vertex_layout)],
+            },
+            primitive: PrimitiveState {
+                topology: PrimitiveTopology::TriangleList,
+                cull_mode: Some(Face::Back),
+                ..PrimitiveState::default()
+            },
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: crate::target::DEPTH_FORMAT,
+                depth_write_enabled: Some(true),
+                depth_compare: Some(wgpu::CompareFunction::LessEqual),
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(FragmentState {
+                module: &module,
+                entry_point: Some("fs_main"),
+                compilation_options: Default::default(),
+                targets: &[Some(ColorTargetState {
+                    format: color_format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: ColorWrites::ALL,
+                })],
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+
+        Ok(TexturedPipeline {
+            pipeline,
+            camera_bgl,
+            draw_bgl,
+        })
+    }
+
+    /// The compiled pipeline for render-pass binding.
+    #[must_use]
+    pub fn raw(&self) -> &RenderPipeline {
+        &self.pipeline
+    }
+
+    /// Layout for the group-0 camera bind group.
+    #[must_use]
+    pub fn camera_bgl(&self) -> &BindGroupLayout {
+        &self.camera_bgl
+    }
+
+    /// Builds a group-1 bind group binding the model ring's dynamic uniform
+    /// together with `texture`'s sampler and view.
+    #[must_use]
+    pub fn create_draw_bind_group(
+        &self,
+        device: &Device,
+        model_buffer: &wgpu::Buffer,
+        texture: &crate::texture::GpuTexture,
+    ) -> wgpu::BindGroup {
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("gens-textured-draw-bg"),
+            layout: &self.draw_bgl,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: model_buffer,
+                        offset: 0,
+                        size: Some(
+                            BufferSize::new(MAT4_UNIFORM_SIZE)
+                                .expect("MAT4_UNIFORM_SIZE is non-zero"),
+                        ),
+                    }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(texture.sampler()),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::TextureView(texture.view()),
+                },
+            ],
+        })
+    }
+}

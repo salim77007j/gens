@@ -20,7 +20,8 @@ pub mod pipeline;
 pub mod renderer;
 pub mod resources;
 pub mod target;
+pub mod texture;
 
 pub use context::{AdapterClass, GpuContext};
-pub use renderer::{ColoredDraw, Renderer};
+pub use renderer::{Draw, Renderer};
 pub use resources::GpuMesh;
