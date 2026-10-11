@@ -8,5 +8,11 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 
+[dependencies]
+gens-core = { workspace = true }
+gens-math = { workspace = true }
+wgpu = { workspace = true }
+pollster = { workspace = true }
+
 [lints]
 workspace = true

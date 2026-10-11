@@ -34,10 +34,13 @@ anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 glam = "0.34.1"
+wgpu = "30.0.1"
+pollster = "1"
 
 gens-core = { path = "crates/gens-core", version = "0.1.0" }
 gens-ecs = { path = "crates/gens-ecs", version = "0.1.0" }
 gens-math = { path = "crates/gens-math", version = "0.1.0" }
+gens-renderer = { path = "crates/gens-renderer", version = "0.1.0" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
