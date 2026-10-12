@@ -880,7 +880,9 @@ dependencies = [
 name = "gens-scripting"
 version = "0.1.0"
 dependencies = [
+ "bevy_ecs",
  "gens-ecs",
+ "gens-math",
  "rhai",
  "serde",
  "serde_json",

@@ -21,8 +21,10 @@
 
 pub mod engine;
 pub mod error;
+pub mod host;
 pub mod vars;
 
 pub use engine::{Script, ScriptEngine};
 pub use error::ScriptError;
+pub use host::{ScriptComponent, ScriptFrame, ScriptHost, ScriptRequests, run_scripts};
 pub use vars::{ScriptValue, ScriptVars};

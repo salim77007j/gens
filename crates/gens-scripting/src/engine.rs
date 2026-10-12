@@ -75,6 +75,17 @@ impl ScriptEngine {
         ScriptEngine { engine }
     }
 
+    /// Raw engine read access (for advanced host use).
+    pub fn engine(&self) -> &rhai::Engine {
+        &self.engine
+    }
+
+    /// Mutable engine access (for host API registration; the sandbox
+    /// limits are re-checked by registration, not bypassed).
+    pub fn engine_mut(&mut self) -> &mut rhai::Engine {
+        &mut self.engine
+    }
+
     /// Compiles `source` into a [`Script`].
     ///
     /// # Errors
