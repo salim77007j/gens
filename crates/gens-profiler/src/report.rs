@@ -285,7 +285,10 @@ mod tests {
         assert_eq!(spans[0]["count"], 2);
         assert_eq!(spans[0]["present_frames"], 2);
         assert_eq!(spans[0]["min_us"], 400);
-        assert_eq!(spans[0]["median_us"], 500, "2 samples: sorted[len/2] = sorted[1]");
+        assert_eq!(
+            spans[0]["median_us"], 500,
+            "2 samples: sorted[len/2] = sorted[1]"
+        );
         assert_eq!(spans[0]["max_us"], 500);
         assert!(spans[0]["share_of_frame"].as_f64().unwrap() > 0.4);
     }

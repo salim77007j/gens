@@ -21,6 +21,10 @@
 //! - `memory` — a tracking [`GlobalAlloc`](std::alloc::GlobalAlloc) wrapper
 //!   exposing current/peak bytes and allocation counts; the honest,
 //!   allocator-level answer to the reference design's "Memory" metric.
+//!   Installed as the process `#[global_allocator]` when this crate is
+//!   linked (always-on, documented in ADR-0027 and RISKS R-030): every
+//!   allocation costs two atomic updates, and the engine gains a live,
+//!   honest "Memory" metric everywhere.
 //!
 //! Benchmarks (`bench_step`, honest environment-disclosed numbers) live in
 //! `gens-runtime`'s examples so they can time the real engine step, not a
@@ -29,8 +33,17 @@
 #![forbid(unsafe_op_in_unsafe_fn)]
 #![warn(missing_docs)]
 
+pub mod memory;
 pub mod report;
 pub mod spans;
 
+pub use memory::{MemorySnapshot, MemoryStats, TrackingAllocator};
 pub use report::{PROFILE_FORMAT, ProfileReport, Quartiles, SpanStats};
 pub use spans::{FrameProfile, Profiler, SpanId, SpanRecord};
+
+/// The process-wide memory statistics, updated by
+/// [`TrackingAllocator`] (the `#[global_allocator]` this crate installs
+/// on link). Read this for live memory numbers.
+pub fn memory_stats() -> &'static MemoryStats {
+    &memory::STATS
+}
