@@ -41,7 +41,7 @@ The workspace, dependency graph, and profiles are defined in Phase 1 (see `docs/
 | 2 | Renderer (offscreen-first wgpu, GPU CI) | **Complete** | [`docs/PHASE_2_REPORT.md`](docs/PHASE_2_REPORT.md) |
 | 3 | Physics + audio + input | **Complete** | [`docs/PHASE_3_REPORT.md`](docs/PHASE_3_REPORT.md) |
 | 4 | Animation + UI + AI | **Complete** | [`docs/PHASE_4_REPORT.md`](docs/PHASE_4_REPORT.md) |
-| 5 | Scripting + assets + save | Pending | — |
+| 5 | Scripting + assets + save | **Complete** | [`docs/PHASE_5_REPORT.md`](docs/PHASE_5_REPORT.md) |
 | 6 | Networking + data assets | Pending | — |
 | 7 | Visual editor | Pending | — |
 | 8 | Profiling + debugging + build pipeline | Pending | — |
