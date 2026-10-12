@@ -11,8 +11,8 @@
 | #103 | ce9b272 P8-5 | success | gens-build: GENSPKG1 packages + CLIs + headless player |
 | #104 | b259ff7 P8-6 | success | editor integration: real Profiler/Performance tabs, status-bar CPU/Mem, console commands |
 | #105 | 272dd04 P8-7 | success | bench_step (environment-disclosed benchmarks) |
-| #106 | 835d08b P8-8 | success | 3 new smokes (profiler/package/bench) green on 3 OS + debug/release size gates pass |
-| #107 | (docs commit) P8-9 | success | phase report + ADR ledger + risks + worklog + README row 8 + evidence |
+| #106 | 835d08b P8-8 | cancelled | superseded by the #107 push (concurrency cancel); content covered by #107 green (same code + docs) |
+| #107 | b85c9a5 P8-9 | success | full gate suite green on 3 OS incl. the 3 new smokes + both size gates; covers #106 content |
 
 Local evidence (this directory):
 - profile_hello_local.json — the ADR-0027 proof run (600 steps, identical hashes, phase quartiles, memory snapshot)
