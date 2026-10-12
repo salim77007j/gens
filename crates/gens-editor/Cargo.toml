@@ -20,7 +20,11 @@ gens-ecs.workspace = true
 glam.workspace = true
 gens-math.workspace = true
 gens-physics.workspace = true
+gens-profiler.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 gens-renderer.workspace = true
+gens-runtime = { path = "../gens-runtime" }
 gens-scripting.workspace = true
 gens-ui.workspace = true
 tracing.workspace = true
@@ -28,5 +32,4 @@ tracing-subscriber.workspace = true
 wgpu.workspace = true
 
 [dev-dependencies]
-gens-runtime = { path = "../gens-runtime" }
 image.workspace = true

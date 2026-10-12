@@ -94,6 +94,12 @@ impl ConsoleBuffer {
     }
 
     /// Whether the buffer is empty.
+    /// Clears the ring (the console `clear` command). Dropped-counter
+    /// history is preserved: it reports ring overflow, not user actions.
+    pub fn clear(&self) {
+        self.inner.lock().expect("console lock").lines.clear();
+    }
+
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -187,8 +193,9 @@ pub(crate) fn panel(ui: &mut egui::Ui, state: &mut EditorState, assets: &AssetRe
             ui.centered_and_justified(|ui| {
                 ui.label(
                     egui::RichText::new(
-                        "Network stats ship with the window shell (Phase 8 scope); \
-                         the session layer's counters live in gens-networking today.",
+                        "Network panel stays an honest empty state: the window \
+                         shell is future work, and the session layer's counters \
+                         live in gens-networking today.",
                     )
                     .color(theme::TEXT_DIM),
                 );
@@ -199,6 +206,31 @@ pub(crate) fn panel(ui: &mut egui::Ui, state: &mut EditorState, assets: &AssetRe
 }
 
 fn console_tab(ui: &mut egui::Ui, state: &mut EditorState) {
+    // Command row: input + Run. The shell records intent only — the app
+    // drains `pending_commands` and executes against the real world
+    // (same pattern as menu commands), results land via `tracing` in the
+    // console buffer itself.
+    ui.horizontal(|ui| {
+        let response = ui.add(
+            egui::TextEdit::singleline(&mut state.command_input)
+                .hint_text("command (help, entities, validate, stats)")
+                .desired_width(280.0),
+        );
+        state
+            .row_rects
+            .insert("command_input".into(), response.rect);
+        let run = ui.button("Run");
+        state.row_rects.insert("command_run".into(), run.rect);
+        let submit =
+            run.clicked() || response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+        if submit && !state.command_input.trim().is_empty() {
+            state
+                .pending_commands
+                .push(state.command_input.trim().to_string());
+            state.command_input.clear();
+        }
+    });
+    ui.separator();
     egui::ScrollArea::vertical()
         .id_salt("console_lines")
         .auto_shrink([false, false])
@@ -240,11 +272,57 @@ fn profiler_tab(ui: &mut egui::Ui, state: &mut EditorState) {
             row(ui, "Console lines", &state.console.len().to_string());
             row(ui, "Dropped lines", &state.console.dropped().to_string());
         });
+    ui.separator();
+    if state.telemetry.frames == 0 {
+        ui.label(
+            egui::RichText::new(
+                "No profiler data yet — the app has not recorded any frames
+                 (a disabled profiler shows the same honest state).",
+            )
+            .small()
+            .color(theme::TEXT_DIM),
+        );
+        return;
+    }
+    // Real per-phase timings (ADR-0027: observation-only, proven not to
+    // touch the simulation). Columns match the reference mock's spirit:
+    // name | median | max | share.
+    egui::Grid::new("phase_grid").num_columns(4).show(ui, |ui| {
+        ui.label(egui::RichText::new("Phase").strong().color(theme::TEXT));
+        ui.label(egui::RichText::new("median ms").strong().color(theme::TEXT));
+        ui.label(egui::RichText::new("max ms").strong().color(theme::TEXT));
+        ui.label(egui::RichText::new("share").strong().color(theme::TEXT));
+        ui.end_row();
+        for phase in &state.telemetry.phases {
+            ui.label(
+                egui::RichText::new(&phase.name)
+                    .monospace()
+                    .color(theme::TEXT),
+            );
+            ui.label(
+                egui::RichText::new(format!("{:.2}", phase.median_ms))
+                    .monospace()
+                    .color(theme::TEXT),
+            );
+            ui.label(
+                egui::RichText::new(format!("{:.2}", phase.max_ms))
+                    .monospace()
+                    .color(theme::TEXT),
+            );
+            ui.label(
+                egui::RichText::new(format!("{:.0}%", phase.share * 100.0))
+                    .monospace()
+                    .color(theme::TEXT_DIM),
+            );
+            ui.end_row();
+        }
+    });
     ui.label(
-        egui::RichText::new(
-            "Per-system timings are wall-clock and would break the \
-             byte-identical replay contract; they are omitted (ADR-0025).",
-        )
+        egui::RichText::new(format!(
+            "wall-clock, rolling window of {} frames — observation-only \
+             (ADR-0027): the byte-identical replay contract is unaffected",
+            state.telemetry.frames
+        ))
         .small()
         .color(theme::TEXT_DIM),
     );
@@ -284,6 +362,32 @@ fn performance_tab(ui: &mut egui::Ui, state: &mut EditorState) {
                 .clone()
                 .unwrap_or_else(|| "none".to_string()),
         );
+        if state.telemetry.frames > 0 {
+            row(
+                ui,
+                "Frame time (median / max)",
+                &format!(
+                    "{:.2} ms / {:.2} ms",
+                    state.telemetry.frame_median_ms, state.telemetry.frame_max_ms
+                ),
+            );
+            row(
+                ui,
+                "Memory (current / peak)",
+                &format!(
+                    "{:.1} MB / {:.1} MB",
+                    state.telemetry.memory_current_mb, state.telemetry.memory_peak_mb
+                ),
+            );
+            row(ui, "Allocations", &state.telemetry.allocations.to_string());
+        } else {
+            row(
+                ui,
+                "Frame time",
+                "no profiler data (app has not recorded frames)",
+            );
+            row(ui, "Memory", "no tracker data yet");
+        }
     });
 }
 
@@ -424,5 +528,131 @@ mod flow_tests {
             state = state_cell.into_inner();
         });
         assert_eq!(state.console.len(), 2);
+    }
+
+    /// ADR-0026 geometry pin (Phase 8): with telemetry present the
+    /// Profiler tab paints the phase table (more tessellation than the
+    /// no-data state), and everything lands inside the bottom dock's
+    /// console column.
+    #[test]
+    fn profiler_tab_paints_phase_table_when_telemetry_present() {
+        let no_data = EditorState::new();
+        let no_data_cell = std::cell::RefCell::new(no_data);
+        let mut ctx = UiContext::new();
+        let frame_empty = ctx.run(gens_ui::UiInput::new([700, 200], 0.0, 1.0 / 60.0), |ui| {
+            let mut s = no_data_cell.borrow_mut();
+            s.bottom_tab = crate::shell::BottomTab::Profiler;
+            profiler_tab(ui, &mut s)
+        });
+        let empty_vertices: usize = frame_empty.meshes.iter().map(|m| m.vertices.len()).sum();
+
+        let mut with_data = EditorState::new();
+        with_data.bottom_tab = crate::shell::BottomTab::Profiler;
+        with_data.telemetry = crate::telemetry::Telemetry {
+            frames: 12,
+            frame_median_ms: 3.1,
+            frame_max_ms: 5.0,
+            phases: vec![
+                crate::telemetry::PhaseTimings {
+                    name: "physics".into(),
+                    median_ms: 1.2,
+                    max_ms: 2.0,
+                    share: 0.4,
+                },
+                crate::telemetry::PhaseTimings {
+                    name: "scripts".into(),
+                    median_ms: 0.8,
+                    max_ms: 1.5,
+                    share: 0.3,
+                },
+            ],
+            ..Default::default()
+        };
+        let with_data_cell = std::cell::RefCell::new(with_data);
+        let mut ctx = UiContext::new();
+        let frame_full = ctx.run(gens_ui::UiInput::new([700, 200], 0.0, 1.0 / 60.0), |ui| {
+            let mut s = with_data_cell.borrow_mut();
+            s.bottom_tab = crate::shell::BottomTab::Profiler;
+            profiler_tab(ui, &mut s)
+        });
+        let full_vertices: usize = frame_full.meshes.iter().map(|m| m.vertices.len()).sum();
+        assert!(
+            full_vertices > empty_vertices,
+            "the phase table must paint (empty {empty_vertices} vs full {full_vertices})"
+        );
+        let max_y = frame_full
+            .meshes
+            .iter()
+            .flat_map(|m| m.vertices.iter())
+            .map(|v| v.pos[1])
+            .fold(0.0f32, f32::max);
+        assert!(
+            max_y <= 202.0,
+            "profiler table must stay in the panel (max y {max_y})"
+        );
+    }
+
+    /// ADR-0026 geometry pin (Phase 8): the command row exists, its Run
+    /// button rect is captured for scripted replay, and submitting a
+    /// command queues it for the app (the shell never executes it).
+    #[test]
+    fn command_row_captures_rects_and_queues_real_intents() {
+        let mut state = EditorState::new();
+        state.bottom_tab = crate::shell::BottomTab::Console;
+        state.command_input = "validate".into();
+        let state_cell = std::cell::RefCell::new(state);
+        let mut ctx = UiContext::new();
+        // Click position = center of the Run button once we know it — but
+        // we don't yet; run once, read the rect, click it on the SECOND
+        // run (the same two-pass pattern the hierarchy click test uses).
+        let _ = ctx.run(gens_ui::UiInput::new([700, 200], 0.0, 1.0 / 60.0), |ui| {
+            let mut s = state_cell.borrow_mut();
+            s.bottom_tab = crate::shell::BottomTab::Console;
+            console_tab(ui, &mut s)
+        });
+        let run_rect = state_cell
+            .borrow()
+            .row_rects
+            .get("command_run")
+            .copied()
+            .expect("Run button rect must be layout-captured");
+        assert!(run_rect.width() > 0.0 && run_rect.height() > 0.0);
+        assert!(run_rect.right() <= 700.0, "command row must fit the panel");
+
+        // Second pass: click the captured rect center (press + release
+        // events, the same UiEvent vocabulary the example replay uses).
+        let center = run_rect.center();
+        let click = gens_ui::UiInput::with_events(
+            [700, 200],
+            vec![
+                gens_ui::UiEvent::PointerButton {
+                    x: center.x,
+                    y: center.y,
+                    button: 0,
+                    pressed: true,
+                },
+                gens_ui::UiEvent::PointerButton {
+                    x: center.x,
+                    y: center.y,
+                    button: 0,
+                    pressed: false,
+                },
+            ],
+        );
+        let _ = ctx.run(click, |ui| {
+            let mut s = state_cell.borrow_mut();
+            s.bottom_tab = crate::shell::BottomTab::Console;
+            console_tab(ui, &mut s)
+        });
+        let queued = state_cell.borrow().pending_commands.clone();
+        assert_eq!(
+            queued,
+            vec!["validate".to_string()],
+            "clicking Run queues the command"
+        );
+        assert!(
+            state_cell.borrow().command_input.is_empty(),
+            "the input clears on submit"
+        );
     }
 }

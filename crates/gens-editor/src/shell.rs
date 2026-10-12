@@ -146,6 +146,14 @@ pub struct EditorState {
     pub selected_asset: Option<String>,
     /// Console ring buffer (tracing events land here).
     pub console: Arc<ConsoleBuffer>,
+    /// Rolling profiler telemetry (app-updated, panels read).
+    pub telemetry: crate::telemetry::Telemetry,
+    /// Console command input (the command row's text field).
+    pub command_input: String,
+    /// Console commands queued by the command row, drained by the app —
+    /// the same intent-queue pattern as [`EditorCommand`] (the shell
+    /// never executes world-level work itself).
+    pub pending_commands: Vec<String>,
 }
 
 impl EditorState {
@@ -167,6 +175,12 @@ impl EditorState {
     /// Drains queued menu commands (the app executes them).
     pub fn take_commands(&mut self) -> Vec<EditorCommand> {
         std::mem::take(&mut self.pending)
+    }
+
+    /// Drains queued console commands (the app executes them against the
+    /// world — see [`crate::commands`]).
+    pub fn take_command_inputs(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.pending_commands)
     }
 }
 
@@ -342,7 +356,9 @@ fn menu_bar(ui: &mut egui::Ui, state: &mut EditorState) {
         });
 }
 
-/// Bottom status bar: readiness dot + deterministic counters.
+/// Bottom status bar: readiness dot + deterministic counters + the
+/// observation-only CPU/Memory summary (Phase 8 telemetry; GPU stays an
+/// honest omission, ADR-0027).
 fn status_bar(ui: &mut egui::Ui, state: &mut EditorState) {
     egui::Panel::bottom("status_bar")
         .exact_size(22.0)
@@ -363,6 +379,10 @@ fn status_bar(ui: &mut egui::Ui, state: &mut EditorState) {
                     ))
                     .color(theme::TEXT_DIM),
                 );
+                if let Some(summary) = state.telemetry.status_summary() {
+                    ui.separator();
+                    ui.label(egui::RichText::new(summary).color(theme::TEXT_DIM));
+                }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(
                         egui::RichText::new("gens editor · offscreen-first").color(theme::TEXT_DIM),
@@ -482,6 +502,54 @@ mod shell_tests {
         assert!(
             right_half_max_y <= 232.0,
             "right-column content must stay inside the dock (max y {right_half_max_y})"
+        );
+    }
+
+    /// ADR-0026 geometry pin (Phase 8): the status bar gains the
+    /// observation-only CPU/Memory summary — it must tessellate and sit in
+    /// the bar's band. Without telemetry frames the summary is honestly
+    /// absent (no fake CPU numbers).
+    #[test]
+    fn status_bar_shows_telemetry_summary_only_when_present() {
+        // Without telemetry: no summary line.
+        let state = EditorState::new();
+        let state_cell = std::cell::RefCell::new(state);
+        let mut ctx = UiContext::new();
+        let frame = ctx.run(gens_ui::UiInput::new([800, 22], 0.0, 1.0 / 60.0), |ui| {
+            status_bar(ui, &mut state_cell.borrow_mut())
+        });
+        let empty_bar_vertices: usize = frame.meshes.iter().map(|m| m.vertices.len()).sum();
+
+        // With telemetry: the bar must paint MORE (the summary joined).
+        let mut state = EditorState::new();
+        state.telemetry = crate::telemetry::Telemetry {
+            frames: 5,
+            frame_median_ms: 2.5,
+            memory_current_mb: 42.0,
+            ..Default::default()
+        };
+        let state_cell = std::cell::RefCell::new(state);
+        let mut ctx = UiContext::new();
+        let frame = ctx.run(gens_ui::UiInput::new([800, 22], 0.0, 1.0 / 60.0), |ui| {
+            status_bar(ui, &mut state_cell.borrow_mut())
+        });
+        let full_bar_vertices: usize = frame.meshes.iter().map(|m| m.vertices.len()).sum();
+        assert!(
+            full_bar_vertices > empty_bar_vertices,
+            "status bar must paint the telemetry summary (empty {empty_bar_vertices} vs full {full_bar_vertices})"
+        );
+        // Everything stays near the 22px band (glyph descenders + frame
+        // padding overhang ~3px; the dock test uses the same slack
+        // convention: 230 dock -> 232 bound).
+        let max_y = frame
+            .meshes
+            .iter()
+            .flat_map(|m| m.vertices.iter())
+            .map(|v| v.pos[1])
+            .fold(0.0f32, f32::max);
+        assert!(
+            max_y <= 28.0,
+            "status bar content must stay in its band (max y {max_y})"
         );
     }
 }
