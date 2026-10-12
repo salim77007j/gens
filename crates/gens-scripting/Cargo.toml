@@ -10,3 +10,9 @@ authors.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+gens-ecs.workspace = true
+thiserror.workspace = true
+rhai.workspace = true
+serde.workspace = true

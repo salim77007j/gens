@@ -273,3 +273,8 @@ Rules:
 - WHAT: PHASE_4_REPORT.md (scorecard, issue log, cross-OS table), ADR-0016/0017/0018, RISKS (R-013 Phase 4 note, R-017 per-call granularity note, R-020 egui churn, R-021 UI raster bit-identity), README status/roadmap/build docs, evidence ledger docs/evidence/phase4/ with run URLs.
 - WHY: governance reconciliation at phase end (ADR-0007).
 - EVIDENCE: runs #44–#55 ledger; workspace 199 passed / 0 failed / 8 ignored (GPU).
+
+### [phase5] dependency pins + branch start (P5-0)
+- WHAT: branch `phase5-scripting-assets-save` from verified main (275d5b1, run #57 green). Pinned: serde 1.0.229 (derive), serde_json 1.0.154, rhai 1.26.1 (`default-features = false, features = ["std"]` — kills ahash runtime-rng so script-visible behavior keeps fixed compile-time-rng hashing), gltf 1.4.1 (default import/utils/names; image 0.25 optional dep matches workspace minor). glam gains the `serde` feature (save-system serialization through gens-math re-exports). gens-scripting/gens-assets registered in [workspace.dependencies] and given their phase deps. MSRVs verified from vendored source: rhai 1.66, gltf 1.61, serde 1.56, serde_json 1.71 — all ≤ 1.99.
+- WHY: Phase 5 (scripting + assets + save) per README roadmap; P4-0's no-guessing discipline: every version queried on crates.io, every API fact read from vendored source BEFORE coding.
+- EVIDENCE: crates.io max-stable queries; vendored-source reads (rhai Map = BTreeMap; ahash forced compile-time-rng via `cargo tree -e features`; gltf Document/Animation/Skin/Node/Mesh/Primitive structs; rhai limits.rs set_max_* sandbox knobs); `cargo fetch` clean; this commit; run #58.
