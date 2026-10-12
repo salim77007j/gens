@@ -866,14 +866,19 @@ dependencies = [
  "egui",
  "gens-ai",
  "gens-animation",
+ "gens-assets",
  "gens-core",
  "gens-ecs",
  "gens-input",
  "gens-math",
  "gens-physics",
  "gens-renderer",
+ "gens-scripting",
  "gens-ui",
  "image",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]
