@@ -34,6 +34,14 @@ R-013/R-021 this is recorded as evidence, not claimed as a guarantee.
 `smoke_animate.json` in this directory is the local sandbox run
 (bit-identical to the CI copies, 4100 B).
 
+## Merge
+
+| Run | Commit | Scope | Conclusion |
+|---|---|---|---|
+| [#57](https://github.com/salim77007j/gens/actions/runs/38187642655) | b9cb823 | merge: phase 4 - animation + UI + AI into main (--no-ff) | SUCCESS |
+
+Tag `pre-phase5-safe` pushed at the merge (rollback anchor, ADR-0005).
+
 ## GPU integration tests (run with real adapters, `--ignored`)
 
 - Linux (lavapipe) and macOS (Metal): 8 ignored tests pass — the 6 Phase 2
