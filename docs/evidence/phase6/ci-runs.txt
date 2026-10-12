@@ -18,5 +18,5 @@
 #   client ticks 600" on Windows, Linux, macOS (byte-identical outputs,
 #   recorded under R-013 as evidence, not a claimed guarantee).
 
-# Merge evidence: appended here after the P6-8 merge.
-# Tag anchor: pre-phase7-safe = <merge commit> (the merge commit).
+# Merge evidence: merge commit 2433b1b, CI run #78 SUCCESS on main.
+# Tag anchor: pre-phase7-safe = 2433b1b (the merge commit).
