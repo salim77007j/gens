@@ -19,3 +19,10 @@ Local evidence (this directory):
 - bench_local.json — debug/linux bench (3 scenarios, 12 samples each)
 - player_cli_run.json — gens-player CLI run over a gens-pkg-built package (300 steps)
 - verify_profile_smoke.json / verify_package_smoke.json — verify.sh gate artifacts
+
+---
+MERGE EVIDENCE (main):
+- merge commit 5b255f9 (phase 8 -> main, --no-ff) — CI run #109 on main: success (all 15 gates on 3 OSes, including profiler/package/bench smokes and the debug 350 MiB + release 20 MiB size gates)
+- ledger correction commit bd68222: #106 recorded as cancelled-superseded (concurrency cancel), content covered by #107 (b85c9a5, success)
+- credential hygiene at merge time: env-only credential helper (reads $GH_TOKEN at push time), no token material in git config, no ~/.git-credentials / ~/.netrc, tracked-file secret scan clean
+- tag pre-phase9-safe anchors this commit as the verified base for Phase 9
