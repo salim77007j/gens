@@ -221,6 +221,41 @@ jobs:
           test -f smoke_profile.json
           echo "profiler smoke evidence: $(wc -c < smoke_profile.json) bytes"
 
+      - name: Headless cinematic smoke (ADR-0030 replay + seek-equivalence proof)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # CPU-only: three runs (straight-through, fresh replay,
+          # seek-resume to the exact internal time) must produce identical
+          # per-step world hashes — the ADR-0030 per-integration proof.
+          cargo run -p gens-runtime --example cinematic_hello -- --steps 300 --out smoke_cinematic.json
+          test -f smoke_cinematic.json
+          echo "cinematic smoke evidence: $(wc -c < smoke_cinematic.json) bytes"
+
+      - name: Headless worldgen smoke (ADR-0031 order/streaming/restart proofs)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # CPU-only: chunk generation is a pure function of (seed, coord);
+          # the streaming walk crosses a chunk boundary and the whole run
+          # must replay identically through the ECS.
+          cargo run -p gens-runtime --example worldgen_hello -- --steps 300 --out smoke_worldgen.json
+          test -f smoke_worldgen.json
+          echo "worldgen smoke evidence: $(wc -c < smoke_worldgen.json) bytes"
+
+      - name: Out-of-tree plugin smoke (ADR-0032 downstream proof)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # The proof crate lives OUTSIDE the workspace and path-depends
+          # on the engine crates like any downstream user; CARGO_TARGET_DIR
+          # shares the workspace target (R-032 disk discipline). If this
+          # step cannot build, the plugin API is broken — a CI gate.
+          cd plugins/hello-plugin
+          cargo run --bin hello-plugin-demo -- --frames 120 --out ../../smoke_plugin.json
+          test -f ../../smoke_plugin.json
+          echo "plugin smoke evidence: $(wc -c < ../../smoke_plugin.json) bytes"
+
       - name: Headless build-pipeline smoke (package build -> verify -> player run)
         if: steps.detect.outputs.active == 'true'
         shell: bash
@@ -259,6 +294,9 @@ jobs:
             smoke_editor.png
             smoke_editor.json
             smoke_profile.json
+            smoke_cinematic.json
+            smoke_worldgen.json
+            smoke_plugin.json
             smoke_package.json
             smoke_bench.json
 

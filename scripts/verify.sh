@@ -8,12 +8,12 @@ cd "$(dirname "$0")/.."
 say() { printf '==> %s\n' "$*"; }
 die() { printf 'VERIFY: FAIL - %s\n' "$*" >&2; exit 1; }
 
-say "[0/14] governance docs present"
+say "[0/17] governance docs present"
 for f in docs/WORKLOG.md docs/DECISIONS.md docs/RISKS.md docs/ROLLBACK_PLAN.md docs/EXPERIMENTS.md; do
   [ -f "$f" ] || die "missing $f"
 done
 
-say "[1/14] secret scan"
+say "[1/17] secret scan"
 if git grep -nE 'gh[pousr]_[A-Za-z0-9]{20,}' -- . 2>/dev/null; then
   die "possible GitHub credential in tracked files (see docs/ROLLBACK_PLAN.md section 5)"
 fi
@@ -24,27 +24,27 @@ if [ ! -f Cargo.toml ]; then
   exit 0
 fi
 
-say "[2/14] cargo fmt";    cargo fmt --all --check
-say "[3/14] cargo clippy"; cargo clippy --workspace --all-targets -- -D warnings
-say "[4/14] cargo build";  cargo build --workspace --all-targets
-say "[5/14] cargo test";   cargo test --workspace
-say "[6/14] physics smoke (input -> physics -> ECS replay, CPU-only, deterministic)"
+say "[2/17] cargo fmt";    cargo fmt --all --check
+say "[3/17] cargo clippy"; cargo clippy --workspace --all-targets -- -D warnings
+say "[4/17] cargo build";  cargo build --workspace --all-targets
+say "[5/17] cargo test";   cargo test --workspace
+say "[6/17] physics smoke (input -> physics -> ECS replay, CPU-only, deterministic)"
 cargo run -q -p gens-runtime --example physics_hello -- --steps 600 --out /tmp/gens_verify_physics.json
 echo "physics smoke: $(wc -c < /tmp/gens_verify_physics.json) bytes of trajectory evidence"
 
-say "[7/14] animation+AI+UI smoke (BT -> animation -> ECS -> egui layout replay)"
+say "[7/17] animation+AI+UI smoke (BT -> animation -> ECS -> egui layout replay)"
 cargo run -q -p gens-runtime --example animate_hello -- --steps 900 --out /tmp/gens_verify_animate.json
 echo "animate smoke: $(wc -c < /tmp/gens_verify_animate.json) bytes of trajectory evidence"
 
-say "[8/14] assets+scripting+save smoke (glTF -> Rhai script -> save/load replay, CPU-only)"
+say "[8/17] assets+scripting+save smoke (glTF -> Rhai script -> save/load replay, CPU-only)"
 cargo run -q -p gens-runtime --example asset_script_hello -- --steps 1200 --out /tmp/gens_verify_asset_script.json
 echo "asset+script smoke: $(wc -c < /tmp/gens_verify_asset_script.json) bytes of save/load replay evidence"
 
-say "[9/14] networking smoke (data document -> QUIC session -> world replication, loopback only)"
+say "[9/17] networking smoke (data document -> QUIC session -> world replication, loopback only)"
 cargo run -q -p gens-runtime --example net_hello -- --steps 600 --replicate-at 300 --out /tmp/gens_verify_net.json
 echo "net smoke: $(wc -c < /tmp/gens_verify_net.json) bytes of replication evidence"
 
-say "[10/14] GPU smoke (offscreen wgpu render; skips honestly without an adapter)"
+say "[10/17] GPU smoke (offscreen wgpu render; skips honestly without an adapter)"
 # Local machines may lack a Vulkan driver: --allow-no-gpu makes the
 # absence explicit instead of failing. CI (Linux+macOS) renders for real;
 # see ADR-0011 for the per-OS guarantees.
@@ -54,19 +54,34 @@ if [ -f /tmp/gens_verify_gpu.png ]; then
 else
   echo "gpu smoke: GPU-SKIP (no adapter here; CI renders on Linux/macOS)"
 fi
-say "[11/14] editor example build (the example itself needs an adapter; CI renders it)"
+say "[11/17] editor example build (the example itself needs an adapter; CI renders it)"
 cargo build -q -p gens-editor --examples
 echo "editor example: built (GPU render proven in CI on Linux/macOS)"
 
-say "[12/14] profiler smoke (observation-only proof + phase timings + memory, CPU-only)"
+say "[12/17] profiler smoke (observation-only proof + phase timings + memory, CPU-only)"
 cargo run -q -p gens-runtime --example profile_hello -- --steps 600 --out /tmp/gens_verify_profile.json
 echo "profiler smoke: $(wc -c < /tmp/gens_verify_profile.json) bytes of ADR-0027 proof evidence"
 
-say "[13/14] build-pipeline smoke (package build -> verify -> headless player run, CPU-only)"
+say "[13/17] cinematic smoke (ADR-0030 replay + seek-equivalence proof, CPU-only)"
+cargo run -q -p gens-runtime --example cinematic_hello -- --steps 300 --out /tmp/gens_verify_cinematic.json
+echo "cinematic smoke: $(wc -c < /tmp/gens_verify_cinematic.json) bytes of replay-proof evidence"
+
+say "[14/17] worldgen smoke (ADR-0031 order/streaming/restart proofs, CPU-only)"
+cargo run -q -p gens-runtime --example worldgen_hello -- --steps 300 --out /tmp/gens_verify_worldgen.json
+echo "worldgen smoke: $(wc -c < /tmp/gens_verify_worldgen.json) bytes of generation evidence"
+
+say "[15/17] plugin smoke (ADR-0032 out-of-tree downstream proof, CPU-only)"
+# The proof crate builds OUTSIDE the workspace; CARGO_TARGET_DIR shares
+# the workspace target (R-032). A failure here means the plugin API is
+# broken — a gate, not a warning.
+(cd plugins/hello-plugin && cargo run -q --bin hello-plugin-demo -- --frames 120 --out /tmp/gens_verify_plugin.json)
+echo "plugin smoke: $(wc -c < /tmp/gens_verify_plugin.json) bytes of API evidence"
+
+say "[16/17] build-pipeline smoke (package build -> verify -> headless player run, CPU-only)"
 cargo run -q -p gens-build --example package_hello -- --out /tmp/gens_verify_package.json
 echo "package smoke: $(wc -c < /tmp/gens_verify_package.json) bytes of export-pipeline evidence"
 
-say "[14/14] binary size gates (debug + release, ADR-0012 + ADR-0029)"
+say "[17/17] binary size gates (debug + release, ADR-0012 + ADR-0029)"
 # Debug calibrated in Phase 2 (ADR-0012), re-baselined in Phase 8 (the dev
 # profile moved to line-tables-only debuginfo): 170.1 MiB measured, gate =
 # 350 MiB (2.1x headroom, unchanged limit).
