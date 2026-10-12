@@ -1,5 +1,10 @@
 [workspace]
 resolver = "3"
+# The out-of-tree plugin proof (plugins/hello-plugin) is deliberately
+# NOT a member: it path-depends on the engine crates like any downstream
+# user, which is the ADR-0032 proof that the plugin API works from
+# outside the workspace. CI builds and runs it as its own step.
+exclude = ["plugins/hello-plugin"]
 members = [
     "crates/gens-core",
     "crates/gens-ecs",

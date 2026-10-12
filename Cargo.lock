@@ -1036,6 +1036,7 @@ name = "gens-plugin"
 version = "0.1.0"
 dependencies = [
  "gens-ecs",
+ "gens-math",
  "thiserror",
 ]
 

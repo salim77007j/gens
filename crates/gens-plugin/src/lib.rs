@@ -29,3 +29,6 @@
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 #![warn(missing_docs)]
+pub mod registry;
+
+pub use registry::{AppliedPlugins, Plugin, PluginError, PluginHost, PluginRegistry};
