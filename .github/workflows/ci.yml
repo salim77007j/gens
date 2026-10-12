@@ -210,6 +210,40 @@ jobs:
             echo "editor smoke snapshot: $(wc -c < smoke_editor.png) bytes"
           fi
 
+      - name: Headless profiler smoke (ADR-0027 observation-only proof + phase timings + memory)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # CPU-only: the same physics replay runs profiler-off and
+          # profiler-on; all per-step world-state hashes must match
+          # byte-for-byte (the per-integration proof ADR-0027 demands).
+          cargo run -p gens-runtime --example profile_hello -- --steps 600 --out smoke_profile.json
+          test -f smoke_profile.json
+          echo "profiler smoke evidence: $(wc -c < smoke_profile.json) bytes"
+
+      - name: Headless build-pipeline smoke (package build -> verify -> player run)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # CPU-only export story: GENSPKG1 built from an in-memory scene +
+          # script, every hash verified, 300 deterministic player steps,
+          # world validated clean. Also proves the gens-player/gens-pkg
+          # bins link on all three OSes.
+          cargo run -p gens-build --example package_hello -- --steps 300 --out smoke_package.json
+          test -f smoke_package.json
+          echo "package smoke evidence: $(wc -c < smoke_package.json) bytes"
+
+      - name: Headless bench smoke (environment-disclosed step timings)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # Small sample count: this is a smoke (does the bench run and
+          # produce a complete report on all OSes), not the benchmark
+          # itself; advisory numbers per ADR-0029.
+          cargo run -p gens-runtime --example bench_step -- --samples 6 --steps-per-sample 40 --warmup 2 --out smoke_bench.json
+          test -f smoke_bench.json
+          echo "bench smoke evidence: $(wc -c < smoke_bench.json) bytes"
+
       - name: Upload smoke artifacts
         if: steps.detect.outputs.active == 'true' && runner.os == 'Linux'
         uses: actions/upload-artifact@v4
@@ -224,18 +258,32 @@ jobs:
             smoke_net.json
             smoke_editor.png
             smoke_editor.json
+            smoke_profile.json
+            smoke_package.json
+            smoke_bench.json
 
-      - name: Binary size gate
+      - name: Binary size gates (debug + release)
         if: steps.detect.outputs.active == 'true'
         shell: bash
         run: |
-          # ADR-0012: gate = 350 MiB on the debug gpu_hello binary — 2x the
-          # measured 171.3 MiB baseline (wgpu-linked, Linux x86_64).
+          # ADR-0012 (Phase 2, re-baselined Phase 8): debug gate 350 MiB on
+          # the gpu_hello binary; the dev profile moved to line-tables-only
+          # debuginfo in Phase 8 (measured 170.1 MiB, limit unchanged).
+          # ADR-0029 (Phase 8): release gate 20 MiB on the thin-LTO release
+          # binary (measured 8.3 MiB, Linux x86_64).
           LIMIT_BYTES=$((350 * 1024 * 1024))
           cargo build -p gens-runtime --example gpu_hello
           SIZE=$(wc -c < target/debug/examples/gpu_hello)
           echo "gpu_hello debug binary: $SIZE bytes (limit $LIMIT_BYTES)"
           if [ "$SIZE" -gt "$LIMIT_BYTES" ]; then
-            echo "::error::binary size gate failed: $SIZE > $LIMIT_BYTES"
+            echo "::error::debug size gate failed: $SIZE > $LIMIT_BYTES"
+            exit 1
+          fi
+          RELEASE_LIMIT_BYTES=$((20 * 1024 * 1024))
+          cargo build --release -p gens-runtime --example gpu_hello
+          RELEASE_SIZE=$(wc -c < target/release/examples/gpu_hello)
+          echo "gpu_hello release binary: $RELEASE_SIZE bytes (limit $RELEASE_LIMIT_BYTES)"
+          if [ "$RELEASE_SIZE" -gt "$RELEASE_LIMIT_BYTES" ]; then
+            echo "::error::release size gate failed: $RELEASE_SIZE > $RELEASE_LIMIT_BYTES"
             exit 1
           fi
