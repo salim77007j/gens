@@ -1,0 +1,10 @@
+{
+  "steps": 24,
+  "window": [1600, 900],
+  "selection": "Spaceship",
+  "duplicated": "Spaceship copy",
+  "clicked": true,
+  "frame_fnv1a64": ["dd5e85db775734e1", "188c153c12a127a2", "4af535ef37a5d1c2", "30f26624e58ac3a1", "0491ccc0fb0fc468", "a9f370c04aa29fb8", "87e0b7d2788f544c", "7fb01ab45237c4df", "ff36d3318c4b7b10", "d25d43e263c55fd9", "a96c16da4db662d9", "5c2f4e691934f1a7", "af4984844156d839", "7d574740dde0aa81", "bb84a5f3aefdb339", "e29a6566d560a92f", "9dad03589277daf1", "dcb30aa0b41dc461", "b22102e1209c145b", "da4da0eed7da7383", "cd57ed0bb092c80d", "e753db041d589f9b", "afd6171aea973911", "35d9a52829a01c35"],
+  "final_fnv1a64": "3880314145872026677",
+  "deterministic": true
+}
