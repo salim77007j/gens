@@ -24,4 +24,6 @@
       AND macOS — byte-identical cross-OS (recorded under R-013 as
       evidence, not claimed as a guarantee)
 
-# Merge run: recorded here after the merge (see the anchor commit).
+# Merge run: #68 SUCCESS (merge commit 4682d5c on main)
+#   https://github.com/salim77007j/gens/actions/runs/38196958100
+# Tag anchor: pre-phase6-safe = 4682d5c (the merge commit).
