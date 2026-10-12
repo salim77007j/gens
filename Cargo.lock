@@ -954,6 +954,7 @@ dependencies = [
  "gens-math",
  "gens-physics",
  "gens-renderer",
+ "gens-runtime",
  "gens-scripting",
  "gens-ui",
  "glam 0.34.1",
