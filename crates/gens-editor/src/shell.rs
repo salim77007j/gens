@@ -301,12 +301,11 @@ fn menu_bar(ui: &mut egui::Ui, state: &mut EditorState) {
         .show(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 ui.menu_button("File", |ui| {
-                    if ui.button("New Scene").clicked() {
-                        state.pending.push(EditorCommand::NewScene);
-                        ui.close();
-                    }
                     if ui.button("Save Scene").clicked() {
-                        gens_core::logging::info!("editor: save scene requested (via app)");
+                        // Deterministic autosave path; the app executes.
+                        state.pending.push(EditorCommand::SaveScene(
+                            "autosave_001.genssave".to_string(),
+                        ));
                         ui.close();
                     }
                 });

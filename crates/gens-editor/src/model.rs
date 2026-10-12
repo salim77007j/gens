@@ -118,8 +118,8 @@ impl Default for AuthoredBody {
 /// world-level commands itself — it only records intent.
 #[derive(Debug, Clone, PartialEq)]
 pub enum EditorCommand {
-    /// File > New Scene: the app rebuilds a fresh world.
-    NewScene,
+    /// File > Save Scene: write the REAL GENSSAVE1 format to this path.
+    SaveScene(String),
     /// Edit > Duplicate Selected: clone the known component set.
     DuplicateSelected,
     /// Edit > Delete Selected: despawn the selection.

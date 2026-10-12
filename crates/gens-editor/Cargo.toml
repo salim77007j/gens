@@ -28,4 +28,5 @@ tracing-subscriber.workspace = true
 wgpu.workspace = true
 
 [dev-dependencies]
+gens-runtime = { path = "../gens-runtime" }
 image.workspace = true
