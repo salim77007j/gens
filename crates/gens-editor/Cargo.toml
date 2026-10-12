@@ -25,6 +25,7 @@ serde.workspace = true
 serde_json.workspace = true
 gens-renderer.workspace = true
 gens-runtime = { path = "../gens-runtime" }
+gens-cinematics = { path = "../gens-cinematics" }
 gens-scripting.workspace = true
 gens-ui.workspace = true
 tracing.workspace = true

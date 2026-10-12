@@ -20,6 +20,7 @@
 //! final window composite is saved as PNG + a JSON evidence blob.
 
 use gens_assets::{AssetKind, AssetRegistry};
+use gens_cinematics::{CinematicPlayer, Timeline, Track};
 use gens_core::anyhow as anyhow_crate;
 use gens_core::anyhow::{Context, Result, anyhow, ensure};
 use gens_core::game_loop::{GameLoop, LoopConfig};
@@ -30,12 +31,13 @@ use gens_ecs::hierarchy::attach_children;
 use gens_ecs::{Active, EngineSchedules, Name, Transform};
 use gens_editor::model::EditorCommand;
 use gens_editor::{EditorShell, MeshSlot};
-use gens_math::{Quat, Vec3, vec3};
+use gens_math::{Quat, Vec3, quat, vec3};
 use gens_physics::ecs::sync_transforms_from_physics;
 use gens_physics::{
     BodySpec, ColliderShape, ColliderSpec, PhysicsBody, PhysicsResource, PhysicsWorld,
 };
 use gens_renderer::GpuContext;
+use gens_runtime::cinematic::{CameraPose, CinematicStage, advance_and_apply};
 use gens_scripting::ScriptComponent;
 use gens_ui::{UiEvent, UiInput};
 use std::collections::BTreeMap;
@@ -101,12 +103,18 @@ fn main() -> Result<()> {
     let profile_json =
         serde_json::to_string(&run_a.profile).context("profile sidecar serialize")?;
     let json = format!(
-        "{{\n  \"steps\": {steps},\n  \"window\": [{}, {}],\n  \"selection\": \"Spaceship\",\n  \"duplicated\": \"{}\",\n  \"clicked\": {},\n  \"validated_clean\": {},\n  \"frame_fnv1a64\": [{}],\n  \"final_fnv1a64\": \"{}\",\n  \"deterministic\": true,\n  \"profile_sidecar\": {}\n}}\n",
+        "{{\n  \"steps\": {steps},\n  \"window\": [{}, {}],\n  \"selection\": \"Spaceship\",\n  \"duplicated\": \"{}\",\n  \"clicked\": {},\n  \"validated_clean\": {},\n  \"cinematic_events\": [{}],\n  \"frame_fnv1a64\": [{}],\n  \"final_fnv1a64\": \"{}\",\n  \"deterministic\": true,\n  \"profile_sidecar\": {}\n}}\n",
         WINDOW_SIZE[0],
         WINDOW_SIZE[1],
         run_a.duplicated_name,
         run_a.clicked,
         run_a.validated_clean,
+        run_a
+            .cinematic_events
+            .iter()
+            .map(|e| format!("\"{e}\""))
+            .collect::<Vec<_>>()
+            .join(", "),
         run_a
             .frame_hashes
             .iter()
@@ -126,6 +134,8 @@ struct RunReport {
     duplicated_name: String,
     clicked: bool,
     validated_clean: bool,
+    /// The cinematic's fired events (the Animator tab's data trail).
+    cinematic_events: Vec<String>,
     /// Observation-only sidecar (ADR-0027): the run's per-phase profile.
     /// Never hashed — two runs' timings differ by design; their PIXELS
     /// must not.
@@ -154,6 +164,24 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
         .with(tracing_subscriber::fmt::layer().without_time().compact());
 
     let ship = entities["Spaceship"];
+
+    // --- Cinematic (Phase 9): a small take that dollies a dedicated
+    // CineCamera and eases its FOV; the Animator tab reads its live
+    // track rows and the Game View tab renders through its pose once
+    // the replay switches tabs. Fixed dt only (ADR-0030).
+    let timeline = std::sync::Arc::new(director_timeline());
+    let mut player = CinematicPlayer::new(timeline);
+    player.play();
+    let cine_camera = world.spawn((
+        Name::new("CineCamera"),
+        Transform::from_position(vec3(0.0, 2.0, 8.0)),
+        Active,
+    ));
+    let cine_camera = cine_camera.id();
+    let mut stage = CinematicStage::new(player, [("camera".to_string(), cine_camera)]);
+    let track_rows = track_rows(&stage);
+    let mut cinematic_events: Vec<String> = Vec::new();
+
     let mut frame_hashes = Vec::new();
     let source = FixedSource::new(Duration::from_secs_f64(DT as f64));
     let mut game_loop = GameLoop::new(LoopConfig::default(), source);
@@ -275,6 +303,37 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
                 profiler.time("propagation", |_| schedules.run_frame(&mut world));
                 shell.state.stats.step += 1;
 
+                // --- Cinematic advance (before the editor frame) -------------
+                let outcome = match advance_and_apply(&mut stage, &mut world, DT) {
+                    Ok(outcome) => outcome,
+                    Err(e) => {
+                        error = Some(anyhow!("cinematic apply failed: {e}"));
+                        return;
+                    }
+                };
+                for event in outcome.events {
+                    info!(event = %event.name, "cinematic event fired");
+                    cinematic_events.push(event.name);
+                }
+                // Refresh the snapshot the Animator + Game View tabs read.
+                let pose = world.get::<CameraPose>(cine_camera).copied();
+                shell.state.cinematic = Some(gens_editor::cinema::CinematicPanelData {
+                    duration: stage.player.timeline().duration(),
+                    local_time: stage.player.local_time(),
+                    state: format!("{:?}", stage.player.state()),
+                    camera_live: outcome.camera_live,
+                    camera_pose: pose,
+                    tracks: track_rows.clone(),
+                    events: cinematic_events.clone(),
+                });
+                if step == 20 {
+                    // Scripted tab switch: the last frames render through
+                    // the cinematic camera (Game View), proving the
+                    // director-owned camera path end to end in CI.
+                    shell.state.view_tab = Some(gens_editor::shell::ViewTab::GameView);
+                    info!("view tab: Game View (cinematic camera)");
+                }
+
                 // --- Editor frame -------------------------------------------
                 let input = UiInput {
                     time_seconds: time,
@@ -336,6 +395,7 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
         duplicated_name,
         clicked,
         validated_clean,
+        cinematic_events,
         profile,
     })
 }
@@ -689,4 +749,96 @@ fn fnv1a64(bytes: &[u8]) -> u64 {
         hash = hash.wrapping_mul(0x100000001b3);
     }
     hash
+}
+
+/// The director's timeline: a 0.5 s take that dollies the CineCamera,
+/// eases its yaw and FOV, and fires one marker. Literal f32 keys only
+/// (the same input discipline as the cinematic replay proof).
+fn director_timeline() -> Timeline {
+    Timeline::builder(0.5)
+        .vec3_track(
+            "camera",
+            gens_cinematics::Channel::Translation,
+            gens_cinematics::Vec3Track::new(
+                vec![
+                    gens_cinematics::Vec3Key {
+                        time: 0.0,
+                        value: vec3(0.0, 2.0, 8.0),
+                    },
+                    gens_cinematics::Vec3Key {
+                        time: 0.5,
+                        value: vec3(1.2, 2.2, 7.2),
+                    },
+                ],
+                gens_cinematics::Interpolation::Smoothstep,
+            )
+            .expect("camera translation track"),
+        )
+        .expect("camera translation")
+        .quat_track(
+            "camera",
+            gens_cinematics::Channel::Rotation,
+            gens_cinematics::QuatTrack::new(
+                vec![
+                    gens_cinematics::QuatKey {
+                        time: 0.0,
+                        value: Quat::IDENTITY,
+                    },
+                    gens_cinematics::QuatKey {
+                        time: 0.5,
+                        value: quat(0.0, -0.1, 0.0, 0.995),
+                    },
+                ],
+                gens_cinematics::Interpolation::Smoothstep,
+            )
+            .expect("camera rotation track"),
+        )
+        .expect("camera rotation")
+        .float_track(
+            "camera",
+            gens_cinematics::Channel::Fov,
+            gens_cinematics::FloatTrack::new(
+                vec![
+                    gens_cinematics::FloatKey {
+                        time: 0.0,
+                        value: 60.0,
+                    },
+                    gens_cinematics::FloatKey {
+                        time: 0.5,
+                        value: 52.0,
+                    },
+                ],
+                gens_cinematics::Interpolation::Linear,
+            )
+            .expect("camera fov track"),
+        )
+        .expect("camera fov")
+        .event(0.1, "director-start")
+        .expect("event")
+        .camera(gens_cinematics::CameraCut {
+            target: "camera".to_string(),
+            hard_cut: true,
+            blend_in: 0.0,
+        })
+        .build()
+        .expect("timeline builds")
+}
+
+/// The Animator tab's track rows (target, channel label, key count) in
+/// deterministic (target, channel) order.
+fn track_rows(stage: &CinematicStage) -> Vec<gens_editor::cinema::TrackRow> {
+    stage
+        .player
+        .timeline()
+        .tracks()
+        .map(|(addr, track)| gens_editor::cinema::TrackRow {
+            target: addr.target.clone(),
+            channel: gens_editor::cinema::channel_label(addr.channel),
+            keys: match track {
+                Track::Float(t) => t.keys().len(),
+                Track::Vec3(t) => t.keys().len(),
+                Track::Quat(t) => t.keys().len(),
+            },
+        })
+        .collect()
 }

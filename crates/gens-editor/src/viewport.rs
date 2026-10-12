@@ -222,13 +222,58 @@ impl EditorViewport {
         state: &EditorState,
         world: &mut World,
     ) -> gens_core::anyhow::Result<()> {
+        let aspect = state.viewport_size_px[0] as f32 / state.viewport_size_px[1].max(1) as f32;
+        let cam = state.orbit.camera(aspect);
+        self.render_with_camera(egui_ctx, state, world, cam)
+    }
+
+    /// Game View: renders the scene through the CINEMATIC camera pose
+    /// (ADR-0030's staging rule — the directed pose is authoritative).
+    /// The pose's position/rotation aim the camera; its FOV sets the
+    /// projection.
+    ///
+    /// # Errors
+    /// As [`EditorViewport::render`].
+    pub fn render_game_view(
+        &mut self,
+        egui_ctx: &egui::Context,
+        state: &EditorState,
+        world: &mut World,
+        pose: &gens_runtime::cinematic::CameraPose,
+    ) -> gens_core::anyhow::Result<()> {
+        let aspect = state.viewport_size_px[0] as f32 / state.viewport_size_px[1].max(1) as f32;
+        // RH convention: the camera looks down its local -Z; up is +Y.
+        let forward = pose.rotation * gens_math::Vec3::NEG_Z;
+        let up = pose.rotation * gens_math::Vec3::Y;
+        let cam = Camera::perspective(
+            pose.position,
+            pose.position + forward,
+            up,
+            gens_math::deg_to_rad(pose.fov_degrees),
+            aspect,
+            0.1,
+            100.0,
+        );
+        self.render_with_camera(egui_ctx, state, world, cam)
+    }
+
+    /// The shared render path: a given [`Camera`] draws the world's
+    /// [`MeshSlot`] entities into the viewport texture.
+    ///
+    /// # Errors
+    /// Propagates mesh upload, model-slot or readback failures.
+    fn render_with_camera(
+        &mut self,
+        egui_ctx: &egui::Context,
+        state: &EditorState,
+        world: &mut World,
+        cam: Camera,
+    ) -> gens_core::anyhow::Result<()> {
         let size = state.viewport_size_px;
         if size != self.last_size {
             self.renderer.resize(size[0], size[1])?;
             self.last_size = size;
         }
-        let aspect = size[0] as f32 / size[1].max(1) as f32;
-        let cam = state.orbit.camera(aspect);
         let view_proj = cam.view_proj();
 
         let device = self.renderer.context().device().clone();
@@ -283,6 +328,50 @@ impl EditorViewport {
         }
         self.last_frame = Some((cam.view, view_proj));
         Ok(())
+    }
+
+    /// Game View panel: the cinematic camera's render with a director
+    /// toolbar. No orbit interaction — the cinematic owns the camera.
+    pub fn game_view_panel(&self, ui: &mut egui::Ui, state: &EditorState) {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("Cinematic").color(theme::TEXT_DIM));
+            ui.separator();
+            match &state.cinematic {
+                Some(cin) => {
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{} t {:.2}/{:.2} fov {:.1}",
+                            cin.state,
+                            cin.local_time,
+                            cin.duration,
+                            cin.camera_pose.map(|p| p.fov_degrees).unwrap_or(0.0),
+                        ))
+                        .color(theme::TEXT_DIM),
+                    );
+                }
+                None => {
+                    ui.label(
+                        egui::RichText::new("no cinematic staging the camera — orbit view")
+                            .color(theme::TEXT_DIM),
+                    );
+                }
+            }
+        });
+        ui.separator();
+        let Some(handle) = &self.tex else {
+            ui.centered_and_justified(|ui| {
+                ui.label(egui::RichText::new("Game View not rendered yet").color(theme::TEXT_DIM));
+            });
+            return;
+        };
+        let size = egui::vec2(self.last_size[0] as f32, self.last_size[1] as f32);
+        let (rect, _response) = ui.allocate_exact_size(size, egui::Sense::hover());
+        ui.painter().image(
+            handle.id(),
+            rect,
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            egui::Color32::WHITE,
+        );
     }
 
     /// Draws the viewport content INTO the UI (called during the paint

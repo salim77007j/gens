@@ -973,6 +973,7 @@ dependencies = [
  "bevy_ecs",
  "egui",
  "gens-assets",
+ "gens-cinematics",
  "gens-core",
  "gens-ecs",
  "gens-math",

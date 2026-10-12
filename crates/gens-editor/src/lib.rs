@@ -23,12 +23,17 @@
 //!      └─ final RGBA ──▶ PNG / FNV hash (evidence)
 //! ```
 //!
+//! Phase 9 adds the [`cinema`] panel data: the Game View / Animator /
+//! Network tabs consume real snapshots (cinematic tracks + clock, camera
+//! pose, session counters) and render honest empty states when absent.
+//!
 //! Panels reflect **real engine vocabulary only** (see ADR-0025): the
 //! hierarchy mirrors the actual ECS tree, the inspector edits actual
 //! components, the asset browser mirrors the actual [`gens_assets`]
 //! registry and the console captures actual `tracing` events.
 
 pub mod assets;
+pub mod cinema;
 pub mod commands;
 pub mod console;
 pub mod hierarchy;
