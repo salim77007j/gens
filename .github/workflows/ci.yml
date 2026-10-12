@@ -136,6 +136,17 @@ jobs:
           test -f smoke_physics.json
           echo "physics smoke trajectory: $(wc -c < smoke_physics.json) bytes"
 
+      - name: Headless animation+AI+UI smoke (BT -> animation -> ECS -> egui layout)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # CPU-only by design: BT decisions, animation sampling and egui
+          # tessellation are pure; two runs must replay bit-identically
+          # (R-013 in-process determinism, same as the physics smoke).
+          cargo run -p gens-runtime --example animate_hello -- --steps 900 --out smoke_animate.json
+          test -f smoke_animate.json
+          echo "animate smoke trajectory: $(wc -c < smoke_animate.json) bytes"
+
       - name: Headless GPU smoke (wgpu offscreen render + PNG)
         if: steps.detect.outputs.active == 'true'
         shell: bash
@@ -164,6 +175,7 @@ jobs:
             smoke_cpu.png
             smoke_gpu.png
             smoke_physics.json
+            smoke_animate.json
 
       - name: Binary size gate
         if: steps.detect.outputs.active == 'true'
