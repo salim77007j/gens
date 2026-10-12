@@ -44,6 +44,8 @@ pub(crate) fn smoothstep01(t: f32) -> f32 {
     t * t * (3.0 - 2.0 * t)
 }
 
+pub mod chunk;
 pub mod heightfield;
 pub mod noise;
 pub mod scatter;
+pub mod streaming;

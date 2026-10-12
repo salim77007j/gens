@@ -29,6 +29,7 @@ gens-assets.workspace = true
 gens-networking.workspace = true
 gens-profiler.workspace = true
 gens-cinematics.workspace = true
+gens-worldgen.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true

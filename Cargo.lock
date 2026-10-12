@@ -1077,6 +1077,7 @@ dependencies = [
  "gens-renderer",
  "gens-scripting",
  "gens-ui",
+ "gens-worldgen",
  "image",
  "serde",
  "serde_json",
