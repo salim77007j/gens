@@ -70,6 +70,9 @@ gens-assets = { path = "crates/gens-assets", version = "0.1.0" }
 gens-networking = { path = "crates/gens-networking", version = "0.1.0" }
 gens-profiler = { path = "crates/gens-profiler", version = "0.1.0" }
 gens-build = { path = "crates/gens-build", version = "0.1.0" }
+gens-cinematics = { path = "crates/gens-cinematics", version = "0.1.0" }
+gens-worldgen = { path = "crates/gens-worldgen", version = "0.1.0" }
+gens-plugin = { path = "crates/gens-plugin", version = "0.1.0" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

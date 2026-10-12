@@ -1061,10 +1061,12 @@ dependencies = [
 name = "gens-runtime"
 version = "0.1.0"
 dependencies = [
+ "bevy_ecs",
  "egui",
  "gens-ai",
  "gens-animation",
  "gens-assets",
+ "gens-cinematics",
  "gens-core",
  "gens-ecs",
  "gens-input",

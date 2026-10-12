@@ -40,3 +40,12 @@ pub mod track;
 pub mod timeline;
 
 pub mod player;
+
+pub use player::{CinematicPlayer, LoopMode, PlaybackState, PlayerError};
+pub use timeline::{
+    CameraCut, Channel, ChannelKind, SampledValue, TargetChannel, Timeline, TimelineError,
+    TimelineEvent, Track,
+};
+pub use track::{
+    FloatKey, FloatTrack, Interpolation, QuatKey, QuatTrack, TrackError, Vec3Key, Vec3Track,
+};
