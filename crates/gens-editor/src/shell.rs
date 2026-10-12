@@ -134,6 +134,10 @@ pub struct EditorState {
     pub row_rects: BTreeMap<String, egui::Rect>,
     /// Commands queued by the menu bar awaiting execution.
     pub pending: Vec<EditorCommand>,
+    /// Asset browser: the folder filter (None = all).
+    pub asset_folder: Option<String>,
+    /// Asset browser: the selected asset key.
+    pub selected_asset: Option<String>,
 }
 
 impl EditorState {
@@ -250,7 +254,7 @@ fn paint(
     menu_bar(ui, state);
     status_bar(ui, state);
     if state.show_bottom_dock {
-        bottom_dock(ui, state);
+        bottom_dock(ui, state, assets);
     }
     if state.show_hierarchy {
         crate::hierarchy::panel(ui, state, world);
@@ -259,7 +263,6 @@ fn paint(
         crate::inspector::panel(ui, state, world);
     }
     center_dock(ui, state, viewport, world);
-    let _ = assets; // consumed by the bottom dock from P7-5 on
 }
 
 /// Top menu bar (File / Edit / View / Help) — items queue real
@@ -349,7 +352,7 @@ fn status_bar(ui: &mut egui::Ui, state: &mut EditorState) {
 
 /// Bottom dock: asset browser (left) + developer console (right),
 /// split like the reference.
-fn bottom_dock(ui: &mut egui::Ui, state: &mut EditorState) {
+fn bottom_dock(ui: &mut egui::Ui, state: &mut EditorState, assets: &AssetRegistry) {
     egui::Panel::bottom("bottom_dock")
         .exact_size(230.0)
         .resizable(false)
@@ -363,7 +366,7 @@ fn bottom_dock(ui: &mut egui::Ui, state: &mut EditorState) {
             let height = ui.available_height();
             ui.horizontal(|ui| {
                 ui.allocate_ui(egui::vec2(half, height), |ui| {
-                    crate::assets::panel(ui, state);
+                    crate::assets::panel(ui, state, assets);
                 });
                 ui.allocate_ui(egui::vec2(ui.available_width(), height), |ui| {
                     crate::console::panel(ui, state);
