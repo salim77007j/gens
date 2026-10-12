@@ -269,6 +269,17 @@ impl PhysicsWorld {
         self.world.bodies.len()
     }
 
+    /// Whether `handle` refers to a live body in this world.
+    ///
+    /// The safe predicate for debugging/validation code: the positional
+    /// accessors index the body set and panic on a stale handle, so
+    /// anything that cannot trust its handles must ask first (Phase 8
+    /// `validate_world` does exactly that).
+    #[must_use]
+    pub fn body_exists(&self, handle: BodyHandle) -> bool {
+        self.world.bodies.get(handle.0).is_some()
+    }
+
     /// Gravity vector (readback for tests and tooling).
     #[must_use]
     pub fn gravity(&self) -> Vec3 {
@@ -459,5 +470,19 @@ mod tests {
         let _ = floor(&mut world);
         assert_eq!(world.body_count(), 1);
         assert!(eq_eps(world.timestep(), PhysicsWorld::DEFAULT_DT));
+    }
+
+    #[test]
+    fn body_exists_distinguishes_live_and_stale_handles() {
+        let mut world = PhysicsWorld::default();
+        let floor_handle = floor(&mut world);
+        assert!(world.body_exists(floor_handle), "fresh handle must exist");
+        // A handle that was never created (max index + max generation) must
+        // report missing — this is the predicate validate_world uses
+        // instead of the panicking positional accessors. The engine never
+        // removes bodies (worlds are rebuilt fresh), so "stale" means
+        // "never existed or from a discarded world".
+        let bogus = BodyHandle(rp::RigidBodyHandle::from_raw_parts(u32::MAX, u32::MAX));
+        assert!(!world.body_exists(bogus));
     }
 }

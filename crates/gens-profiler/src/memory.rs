@@ -192,9 +192,16 @@ static GLOBAL_ALLOCATOR: TrackingAllocator = TrackingAllocator;
 mod tests {
     use super::*;
 
-    /// All assertions are monotonic (>=) because tests run in parallel
-    /// threads and other tests' allocations shift `current` between reads;
-    /// only the lifetime totals and counts are guaranteed to move.
+    /// Test-load honesty: these counters are PROCESS-GLOBAL and tests run
+    /// in parallel threads, so an assertion is sound only if it holds under
+    /// arbitrary concurrent alloc/dealloc between two reads. The safe
+    /// families, used throughout:
+    /// - lifetime totals and counts are MONOTONIC (never decrease),
+    /// - peak_bytes is monotonic and dominates current_bytes at every
+    ///   instant, hence dominates every past current read,
+    /// - current_bytes read at t2 has no lower bound from an allocation at
+    ///   t0 < t2 (others may have freed in between) — such asserts are
+    ///   forbidden.
     #[test]
     fn allocating_increases_lifetime_totals_and_counts() {
         let before_total = STATS.total_allocated_bytes();
@@ -211,22 +218,29 @@ mod tests {
     }
 
     #[test]
-    fn peak_is_never_below_current() {
+    fn peak_dominates_every_prior_current_read() {
+        // After this allocation, peak must be >= 4096 forever: the peak
+        // recorded at the alloc instant includes the block, and peak never
+        // decreases. (current has no such lower bound — parallel tests may
+        // free more than this test allocates between our reads.)
         let v = vec![1u8; 4096];
         let snap = STATS.snapshot();
+        assert!(
+            snap.peak_bytes >= v.len(),
+            "peak must have included the live block"
+        );
         assert!(snap.peak_bytes >= snap.current_bytes);
-        assert!(snap.current_bytes >= v.len());
+        drop(v);
     }
 
     #[test]
-    fn totals_are_self_consistent() {
+    fn counters_move_and_format_is_stable() {
+        let before_deallocs = STATS.deallocations();
+        let v = vec![2u8; 8192];
+        drop(v);
+        assert!(STATS.deallocations() > before_deallocs, "a drop must count");
         let snap = STATS.snapshot();
-        assert!(snap.total_allocated_bytes >= snap.total_deallocated_bytes);
         assert_eq!(snap.format, "gens-mem-1");
-        // Snapshot fields must mirror the accessor methods exactly.
-        assert_eq!(snap.current_bytes, STATS.current_bytes());
-        assert_eq!(snap.peak_bytes, STATS.peak_bytes());
-        assert_eq!(snap.allocations, STATS.allocations());
     }
 
     #[test]

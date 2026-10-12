@@ -17,6 +17,7 @@
 //! (profiler on vs off must replay byte-identically).
 
 pub mod data;
+pub mod debug;
 pub mod net;
 pub mod profile;
 pub mod save;

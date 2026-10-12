@@ -27,6 +27,7 @@ use gens_physics::{
     sync_transforms_from_physics,
 };
 use gens_profiler::{Profiler, memory_stats};
+use gens_runtime::debug::validate_world;
 use gens_runtime::profile::{instrumented_frame, world_state_hash};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -50,7 +51,10 @@ fn impulse_script() -> Vec<(u32, usize, [f32; 3])> {
 ///
 /// Returns the per-step [`world_state_hash`] sequence; with
 /// `profiler: Profiler` the caller decides enabled vs disabled.
-fn run_simulation(steps: u32, mut profiler: Profiler) -> anyhow::Result<(Vec<u64>, Profiler)> {
+fn run_simulation(
+    steps: u32,
+    mut profiler: Profiler,
+) -> anyhow::Result<(Vec<u64>, Profiler, World)> {
     let mut world = World::new();
     let mut physics = PhysicsWorld::new(gens_math::Vec3::new(0.0, -9.81, 0.0));
 
@@ -132,7 +136,7 @@ fn run_simulation(steps: u32, mut profiler: Profiler) -> anyhow::Result<(Vec<u64
         profiler.end_frame();
     }
 
-    Ok((hashes, profiler))
+    Ok((hashes, profiler, world))
 }
 
 /// The evidence document: proof + profile report + memory snapshot.
@@ -156,6 +160,8 @@ struct Proof {
     final_hash: u64,
     /// The profiled run's span names, sorted (sanity evidence).
     span_names: Vec<String>,
+    /// Invariant violations on the final world (must be empty).
+    violations: Vec<gens_runtime::debug::Violation>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -183,8 +189,8 @@ fn main() -> anyhow::Result<()> {
     info!(steps, ?out, %filter, "run configuration");
 
     // --- The proof: profiler OFF vs ON must hash identically ---------------
-    let (hashes_off, _) = run_simulation(steps, Profiler::disabled())?;
-    let (hashes_on, profiler) = run_simulation(steps, Profiler::enabled())?;
+    let (hashes_off, _, _) = run_simulation(steps, Profiler::disabled())?;
+    let (hashes_on, profiler, world) = run_simulation(steps, Profiler::enabled())?;
     anyhow::ensure!(
         hashes_off.len() == hashes_on.len() && hashes_off.len() == steps as usize,
         "both runs must hash every step"
@@ -217,6 +223,17 @@ fn main() -> anyhow::Result<()> {
     }
     let memory = memory_stats().snapshot();
 
+    // --- Debugging pillar evidence: the final world must be clean ----------
+    let violations = validate_world(&world, None);
+    anyhow::ensure!(
+        violations.is_empty(),
+        "the final world must validate clean, got {violations:?}"
+    );
+    info!(
+        entities = world.iter_entities().count(),
+        "final world validates clean"
+    );
+
     let doc = ProfileHello {
         format: "gens-profile-hello-1",
         steps,
@@ -226,6 +243,7 @@ fn main() -> anyhow::Result<()> {
             identical: true,
             final_hash: *hashes_on.last().expect("at least one step"),
             span_names,
+            violations,
         },
         profile: report,
         memory,
