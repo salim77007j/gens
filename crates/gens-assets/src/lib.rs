@@ -37,4 +37,6 @@ pub use error::{AssetError, DataError, UnsupportedGlTF};
 pub use gltf::{ImportedClip, ImportedGlTF, ImportedMesh, ImportedNode, ImportedSkin};
 pub use hash::fnv1a64;
 pub use mesh::MeshData;
-pub use registry::{AssetEntry, AssetId, AssetKind, AssetRegistry};
+pub use registry::{
+    AssetEntry, AssetId, AssetKind, AssetRegistry, canonicalize_key, kind_from_path,
+};

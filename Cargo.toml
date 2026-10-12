@@ -17,6 +17,7 @@ members = [
     "crates/gens-editor",
     "crates/gens-runtime",
     "crates/gens-profiler",
+    "crates/gens-build",
 ]
 
 [workspace.package]
@@ -65,6 +66,7 @@ gens-scripting = { path = "crates/gens-scripting", version = "0.1.0" }
 gens-assets = { path = "crates/gens-assets", version = "0.1.0" }
 gens-networking = { path = "crates/gens-networking", version = "0.1.0" }
 gens-profiler = { path = "crates/gens-profiler", version = "0.1.0" }
+gens-build = { path = "crates/gens-build", version = "0.1.0" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -925,6 +925,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "gens-build"
+version = "0.1.0"
+dependencies = [
+ "gens-assets",
+ "gens-core",
+ "gens-ecs",
+ "gens-profiler",
+ "gens-runtime",
+ "gens-scripting",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
 name = "gens-core"
 version = "0.1.0"
 dependencies = [
