@@ -20,11 +20,13 @@
 //! below it is pure and unit-testable.
 
 pub mod error;
+pub mod gltf;
 pub mod hash;
 pub mod mesh;
 pub mod registry;
 
-pub use error::AssetError;
+pub use error::{AssetError, UnsupportedGlTF};
+pub use gltf::{ImportedClip, ImportedGlTF, ImportedMesh, ImportedNode, ImportedSkin};
 pub use hash::fnv1a64;
 pub use mesh::MeshData;
 pub use registry::{AssetEntry, AssetId, AssetKind, AssetRegistry};
