@@ -1007,6 +1007,10 @@ dependencies = [
 [[package]]
 name = "gens-profiler"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "gens-renderer"

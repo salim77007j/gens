@@ -28,3 +28,9 @@
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 #![warn(missing_docs)]
+
+pub mod report;
+pub mod spans;
+
+pub use report::{PROFILE_FORMAT, ProfileReport, Quartiles, SpanStats};
+pub use spans::{FrameProfile, Profiler, SpanId, SpanRecord};
