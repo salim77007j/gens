@@ -240,3 +240,24 @@ This file is append-only: decisions are superseded by new ADRs, never rewritten.
 - *Generic `Resource` impl via derive on user enums* — rejected: forces `Component` bounds on every game's action enum (leaks bevy into gameplay code).
 
 **Risks & mitigations.** Key vocabulary growth (F-keys, numpad, IME) → `#[non_exhaustive]` + backend translations stay in one module; edge-ordering bugs ("update before query" swallows just-pressed) → documented frame contract in the crate docs, and the physics demo's behavioral tests caught exactly this bug class in practice.
+
+## ADR-0016 — Animation: pure deterministic clip/blend/controller core; skinning and glTF import deferred
+
+- **Status:** Accepted (Phase 4)
+- **Context:** Phase 4 needs skeletal animation, blending and state machines (README roadmap) that compose with the replay-tested simulation discipline. Mesh-space skinning needs a skinned render path, and clip import needs an asset pipeline — neither exists before Phase 5/8.
+- **Decision:** `gens-animation` is a pure `(state, time)` core: flat cycle-free `Skeleton` (parents strictly earlier indices), TRS `JointPose` + forward kinematics, keyframe tracks (linear/step/shortest-arc slerp, sorted + validated), `Clip` per-joint channels, pose blending (`blend_into`, `crossfade`), and an `AnimationController` state machine whose conditions are **data** (declared parameter comparisons), not closures. No wall clocks, no hidden state; looping wraps `time % duration`. Controllers are replay-tested bit-for-bit.
+- **Consequences:** glTF/mesh skinning arrive with the assets phase on top of this sampling layer; determinism carries the R-013 in-process scope; slerp is shortest-arc via glam (unit quaternions double-cover rotations — endpoints canonicalize, documented in tests).
+
+## ADR-0017 — UI: egui 0.36 immediate mode behind a pure headless core; gens-renderer backend instead of egui-wgpu
+
+- **Status:** Accepted (Phase 4)
+- **Context:** The delegation shortlists egui/Slint. The engine pins wgpu 30.0.1; `egui-wgpu` pins its own wgpu minor, which would put two wgpu trees in the lockfile (the Phase 3 rapier dual-glam lesson). CI needs UI without windows or system fonts.
+- **Decision:** `gens-ui` wraps egui 0.36.2 in two layers: (1) a **pure headless core** — neutral `UiEvent` streams in, fully tessellated `UiFrame`s out (`ctx.run_ui` → `ctx.tessellate`), pixels-per-point pinned to 1.0, engine simulation time only, texture deltas emitted sorted (egui's delta maps are `HashMap`s) and acknowledged (`clear()`, epaint 0.36 asserts); (2) a **wgpu backend in gens-renderer** (`ui.rs`): vertices converted to NDC on the CPU (no uniforms in the pipeline), premultiplied over-blending (one / one-minus-src-alpha), per-batch scissor, color-only pass. egui's premultiplied-sRGB vertex colors are decoded to linear at the render boundary — the Phase 2 convention (P2-8) — pinning opaque-color byte round-trips, proven by GPU tests on lavapipe/Metal.
+- **Consequences:** egui types surface in `gens-ui`'s public closures (the facade confines the dependency); exact antialiased-edge compositing matches egui-backend convention rather than strictly linear-light premultiplied math (opaque colors are exact; documented honestly); embedded fonts (`epaint_default_fonts`) remove the system-font CI dependency; windowing/event backends later feed the same `UiEvent` stream.
+
+## ADR-0018 — AI: hand-rolled behavior trees + grid A* with integer-quantized determinism; no external deps
+
+- **Status:** Accepted (Phase 4)
+- **Context:** The stub promises "navigation, pathfinding and behavior trees". Mature crates exist, but the engine's defining constraint is replayable determinism (R-013), and the needed scope (classic BT node set + grid A* + steering) is small enough to own.
+- **Decision:** `gens-ai` hand-rolls: `NodeStatus`/`Blackboard`/`Behavior` with memory-based Sequence/Selector (finished children are not re-ticked — pinned by tick-counting tests), Parallel (All/Any), Inverter, Repeat, Wait, Action/Condition leaves; a `Grid` (walkable/cost cells) with A* using **integer-quantized priorities** (cost·1024 → u32; total order `(f, h, index)`) and fixed neighbor expansion order (N/E/S/W then diagonals, corner-cut prevention); stateless `Steering` (seek/flee/arrive/follow_path with a documented overshoot limitation) plus a stateful forward-only `PathFollower`.
+- **Consequences:** no upstream churn risk for AI; navmesh and hierarchical pathing are future work on the same contracts; identical grids always yield identical paths (asserted in tests); in-process determinism scope per R-013.

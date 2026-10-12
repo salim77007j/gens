@@ -25,6 +25,7 @@ use crate::pipeline::{
 use crate::resources::{GpuMesh, ModelUniforms};
 use crate::target::RenderTarget;
 use crate::texture::GpuTexture;
+use crate::ui::{UiBatch, UiPipeline, validate_batch};
 
 /// One draw command: an uploaded mesh positioned by model slot, rendered
 /// by the colored or the textured pipeline.
@@ -56,6 +57,7 @@ pub struct Renderer {
     target: RenderTarget,
     colored: ColoredPipeline,
     textured: TexturedPipeline,
+    ui: UiPipeline,
     camera_buf: wgpu::Buffer,
     camera_bg: wgpu::BindGroup,
     models: ModelUniforms,
@@ -72,6 +74,7 @@ impl Renderer {
         let target = RenderTarget::new(device, width, height)?;
         let colored = ColoredPipeline::new(device, wgpu::TextureFormat::Rgba8UnormSrgb)?;
         let textured = TexturedPipeline::new(device, wgpu::TextureFormat::Rgba8UnormSrgb)?;
+        let ui = UiPipeline::new(device, wgpu::TextureFormat::Rgba8UnormSrgb)?;
 
         let camera_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("gens-camera-uniform"),
@@ -100,6 +103,7 @@ impl Renderer {
             target,
             colored,
             textured,
+            ui,
             camera_buf,
             camera_bg,
             models,
@@ -211,6 +215,98 @@ impl Renderer {
                         mesh.draw(&mut pass);
                     }
                 }
+            }
+        }
+        self.target.copy_color_to_staging(&mut encoder);
+        queue.submit([encoder.finish()]);
+        self.target.read_pixels(device)
+    }
+
+    /// Renders UI batches over a color-only pass and returns packed RGBA8
+    /// pixels (`width * height * 4` bytes, top-to-bottom).
+    ///
+    /// No depth attachment is bound: UI draws last, over everything, and
+    /// each batch applies its own scissor rectangle (physical pixels).
+    /// Vertices arrive in NDC (see [`crate::ui::UiVertex::ndc_from_pixel`]).
+    ///
+    /// # Errors
+    /// Returns [`EngineError`] when a batch's indices are out of range or
+    /// the readback fails.
+    pub fn draw_ui_and_read(&self, clear: wgpu::Color, batches: &[UiBatch<'_>]) -> Result<Vec<u8>> {
+        let device = self.ctx.device();
+        let queue = self.ctx.queue();
+        let target_w = self.target.width();
+        let target_h = self.target.height();
+
+        for batch in batches {
+            validate_batch(batch.vertices.len(), batch.indices)?;
+        }
+
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("gens-ui-encoder"),
+        });
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("gens-ui-pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: self.target.color_view(),
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(clear),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            // Batch-local GPU resources must live until submit.
+            let mut temp: Vec<(wgpu::Buffer, wgpu::Buffer, wgpu::BindGroup)> = Vec::new();
+            for batch in batches {
+                let vertex_data: Vec<u8> =
+                    batch.vertices.iter().flat_map(|v| v.to_bytes()).collect();
+                let mut index_data = Vec::with_capacity(batch.indices.len() * 4);
+                for i in batch.indices {
+                    index_data.extend_from_slice(&i.to_le_bytes());
+                }
+                let vbuf = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("gens-ui-vertex-buffer"),
+                    size: vertex_data.len().max(1) as u64,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                });
+                queue.write_buffer(&vbuf, 0, &vertex_data);
+                let ibuf = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("gens-ui-index-buffer"),
+                    size: index_data.len().max(1) as u64,
+                    usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                });
+                queue.write_buffer(&ibuf, 0, &index_data);
+                let bind = self.ui.create_texture_bind_group(device, batch.texture);
+                temp.push((vbuf, ibuf, bind));
+
+                if let Some([sx, sy, sw, sh]) = batch.scissor_px {
+                    let x = sx.min(target_w);
+                    let y = sy.min(target_h);
+                    let w = sw.min(target_w.saturating_sub(x));
+                    let h = sh.min(target_h.saturating_sub(y));
+                    if w == 0 || h == 0 {
+                        continue; // fully clipped batch: nothing to draw
+                    }
+                    pass.set_scissor_rect(x, y, w, h);
+                } else {
+                    pass.set_scissor_rect(0, 0, target_w, target_h);
+                }
+                pass.set_pipeline(self.ui.raw());
+                let (_, _, bind) = temp.last().expect("just pushed");
+                pass.set_bind_group(0, bind, &[]);
+                let (vbuf, ibuf, _) = temp.last().expect("just pushed");
+                pass.set_vertex_buffer(0, vbuf.slice(..));
+                pass.set_index_buffer(ibuf.slice(..), wgpu::IndexFormat::Uint32);
+                pass.draw_indexed(0..batch.indices.len() as u32, 0, 0..1);
             }
         }
         self.target.copy_color_to_staging(&mut encoder);
