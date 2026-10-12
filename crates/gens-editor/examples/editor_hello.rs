@@ -152,122 +152,129 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
         info!("input devices: keyboard, mouse");
         info!("physics initialized: rapier3d");
 
-        game_loop.run_frame(|_| {
-            if error.is_some() || step_done >= steps {
-                return;
-            }
-            let step = step_done;
-            let time = step as f64 * DT as f64;
+        // One run_frame call per scripted frame: FixedSource yields
+        // exactly one fixed step per call (deterministic virtual time).
+        for _ in 0..steps {
+            game_loop.run_frame(|_| {
+                if error.is_some() || step_done >= steps {
+                    return;
+                }
+                let step = step_done;
+                let time = step as f64 * DT as f64;
 
-            // --- Scripted interactions (real UiEvents / real APIs) ------
-            let events = events_for(step, &shell.state);
-            if step == 18 {
-                // Same intent the Edit menu writes.
-                shell.state.pending.push(EditorCommand::DuplicateSelected);
-            }
-            if step == 22 {
-                // Same intent the File menu writes.
-                shell.state.pending.push(EditorCommand::SaveScene(
-                    "autosave_001.genssave".to_string(),
-                ));
-            }
-            for command in shell.state.take_commands() {
-                match command {
-                    EditorCommand::SaveScene(path) => {
-                        match gens_runtime::save::save_world_to_file(&world, &path) {
-                            Ok(bytes) => info!(path, bytes, "Saved scene"),
-                            Err(e) => {
-                                error = Some(anyhow!("save failed: {e}"));
-                                return;
+                // --- Scripted interactions (real UiEvents / real APIs) ------
+                let events = events_for(step, &shell.state);
+                if step == 18 {
+                    // Same intent the Edit menu writes.
+                    shell.state.pending.push(EditorCommand::DuplicateSelected);
+                }
+                if step == 22 {
+                    // Same intent the File menu writes.
+                    shell.state.pending.push(EditorCommand::SaveScene(
+                        "autosave_001.genssave".to_string(),
+                    ));
+                }
+                for command in shell.state.take_commands() {
+                    match command {
+                        EditorCommand::SaveScene(path) => {
+                            match gens_runtime::save::save_world_to_file(&world, &path) {
+                                Ok(bytes) => info!(path, bytes, "Saved scene"),
+                                Err(e) => {
+                                    error = Some(anyhow!("save failed: {e}"));
+                                    return;
+                                }
+                            }
+                        }
+                        EditorCommand::DuplicateSelected => {
+                            if let Some(name) = duplicate_selected(&mut world, &mut shell.state) {
+                                duplicated_name = name.clone();
+                                info!(name, "Entity spawned");
+                            }
+                        }
+                        EditorCommand::DeleteSelected => {
+                            if let Some(sel) = shell.state.selected.take() {
+                                world.despawn(sel);
+                                info!("Entity deleted");
                             }
                         }
                     }
-                    EditorCommand::DuplicateSelected => {
-                        if let Some(name) = duplicate_selected(&mut world, &mut shell.state) {
-                            duplicated_name = name.clone();
-                            info!(name, "Entity spawned");
-                        }
-                    }
-                    EditorCommand::DeleteSelected => {
-                        if let Some(sel) = shell.state.selected.take() {
-                            world.despawn(sel);
-                            info!("Entity deleted");
-                        }
-                    }
                 }
-            }
-            if step == 15 {
-                // The inspector's write path: move the ship (visible in
-                // the viewport on the next frame).
-                gens_editor::inspector::set_transform(
-                    &mut world,
-                    ship,
-                    vec3(1.5, 0.8, 0.0),
-                    [0.0, 0.0, 0.0],
-                    Vec3::ONE,
-                );
-                info!("inspector edit applied: Spaceship moved");
-            }
-            if step == 6 {
-                // Selection gate: the frame-5 click must have landed.
-                let selected_now = shell
-                    .state
-                    .selected
-                    .and_then(|e| world.get::<Name>(e).map(|n| n.as_str().to_string()));
-                clicked = selected_now.as_deref() == Some("Spaceship");
-                if !clicked {
-                    error = Some(anyhow!(
-                        "hierarchy click did not select Spaceship (got {selected_now:?})"
-                    ));
-                    return;
+                if step == 15 {
+                    // The inspector's write path: move the ship (visible in
+                    // the viewport on the next frame).
+                    gens_editor::inspector::set_transform(
+                        &mut world,
+                        ship,
+                        vec3(1.5, 0.8, 0.0),
+                        [0.0, 0.0, 0.0],
+                        Vec3::ONE,
+                    );
+                    info!("inspector edit applied: Spaceship moved");
                 }
-                info!("selection: Spaceship (via real pointer click)");
-            }
+                if step == 6 {
+                    // Selection gate: the frame-5 click must have landed.
+                    let selected_now = shell
+                        .state
+                        .selected
+                        .and_then(|e| world.get::<Name>(e).map(|n| n.as_str().to_string()));
+                    clicked = selected_now.as_deref() == Some("Spaceship");
+                    if !clicked {
+                        error = Some(anyhow!(
+                            "hierarchy click did not select Spaceship (got {selected_now:?})"
+                        ));
+                        return;
+                    }
+                    info!("selection: Spaceship (via real pointer click)");
+                }
 
-            // --- Simulation ---------------------------------------------
-            world.resource_mut::<PhysicsResource>().world.step();
-            schedules.run_frame(&mut world);
-            shell.state.stats.step += 1;
+                // --- Simulation ---------------------------------------------
+                world.resource_mut::<PhysicsResource>().world.step();
+                schedules.run_frame(&mut world);
+                shell.state.stats.step += 1;
 
-            // --- Editor frame -------------------------------------------
-            let input = UiInput {
-                time_seconds: time,
-                dt_seconds: DT,
-                size_px: WINDOW_SIZE,
-                events,
-            };
-            match shell.frame(input, &mut world, &assets) {
-                Ok(pixels) => {
-                    frame_hashes.push(fnv1a64(&pixels));
-                    if capture_png && step + 1 == steps {
-                        match image::RgbaImage::from_raw(WINDOW_SIZE[0], WINDOW_SIZE[1], pixels)
-                            .ok_or_else(|| anyhow!("composite size mismatch"))
-                        {
-                            Ok(image) => {
-                                let png_path = format!("{}.png", out_dir.display());
-                                if let Err(e) = image
-                                    .save(&png_path)
-                                    .with_context(|| format!("writing {png_path}"))
-                                {
+                // --- Editor frame -------------------------------------------
+                let input = UiInput {
+                    time_seconds: time,
+                    dt_seconds: DT,
+                    size_px: WINDOW_SIZE,
+                    events,
+                };
+                match shell.frame(input, &mut world, &assets) {
+                    Ok(pixels) => {
+                        frame_hashes.push(fnv1a64(&pixels));
+                        if capture_png && step + 1 == steps {
+                            match image::RgbaImage::from_raw(WINDOW_SIZE[0], WINDOW_SIZE[1], pixels)
+                                .ok_or_else(|| anyhow!("composite size mismatch"))
+                            {
+                                Ok(image) => {
+                                    let png_path = format!("{}.png", out_dir.display());
+                                    if let Err(e) = image
+                                        .save(&png_path)
+                                        .with_context(|| format!("writing {png_path}"))
+                                    {
+                                        error = Some(e);
+                                        return;
+                                    }
+                                    info!(png_path, "editor snapshot written");
+                                }
+                                Err(e) => {
                                     error = Some(e);
                                     return;
                                 }
-                                info!(png_path, "editor snapshot written");
-                            }
-                            Err(e) => {
-                                error = Some(e);
-                                return;
                             }
                         }
                     }
+                    Err(e) => {
+                        error = Some(e);
+                        return;
+                    }
                 }
-                Err(e) => {
-                    error = Some(e);
-                    return;
-                }
+                step_done += 1;
+            });
+            if error.is_some() {
+                break;
             }
-            step_done += 1;
-        });
+        }
     });
 
     if let Some(e) = error {
