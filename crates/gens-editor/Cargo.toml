@@ -20,6 +20,7 @@ gens-ecs.workspace = true
 gens-math.workspace = true
 gens-physics.workspace = true
 gens-renderer.workspace = true
+gens-scripting.workspace = true
 gens-ui.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

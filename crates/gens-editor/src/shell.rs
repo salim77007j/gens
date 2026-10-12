@@ -111,8 +111,9 @@ pub struct EditorState {
     pub selected: Option<Entity>,
     /// Hierarchy search filter text.
     pub search: String,
-    /// Entities whose children are expanded in the hierarchy.
-    pub expanded: BTreeSet<Entity>,
+    /// Entities the user explicitly collapsed in the hierarchy (trees
+    /// open by default — the reference editor behavior).
+    pub collapsed: BTreeSet<Entity>,
     /// Active center-dock tab.
     pub view_tab: Option<ViewTab>,
     /// Active bottom-dock tab.

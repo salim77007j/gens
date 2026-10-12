@@ -945,6 +945,21 @@ dependencies = [
 [[package]]
 name = "gens-editor"
 version = "0.1.0"
+dependencies = [
+ "bevy_ecs",
+ "egui",
+ "gens-assets",
+ "gens-core",
+ "gens-ecs",
+ "gens-math",
+ "gens-physics",
+ "gens-renderer",
+ "gens-scripting",
+ "gens-ui",
+ "image",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "gens-input"
