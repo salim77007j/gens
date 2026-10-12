@@ -25,6 +25,7 @@ gens-ai.workspace = true
 egui.workspace = true
 gens-scripting.workspace = true
 gens-assets.workspace = true
+gens-networking.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true

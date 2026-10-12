@@ -13,5 +13,6 @@
 //! [`save`]; [`net`] lands with the networking pillar (P6-3/P6-4).
 
 pub mod data;
+pub mod net;
 pub mod save;
 pub mod snapshot;

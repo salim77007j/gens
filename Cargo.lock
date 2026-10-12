@@ -1008,6 +1008,7 @@ dependencies = [
  "gens-ecs",
  "gens-input",
  "gens-math",
+ "gens-networking",
  "gens-physics",
  "gens-renderer",
  "gens-scripting",
