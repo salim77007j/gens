@@ -1,0 +1,53 @@
+{
+  "format": "gens-bench-1",
+  "env": {
+    "os": "linux",
+    "arch": "x86_64",
+    "profile": "debug",
+    "parallelism": 2,
+    "adapter": "cpu-only (no GPU in the timed path)",
+    "version": "0.1.0",
+    "advisory": "advisory only: shared runners; compare within one environment class, never across"
+  },
+  "benches": [
+    {
+      "name": "physics_10_bodies",
+      "samples": 12,
+      "steps_per_sample": 60,
+      "warmup": 5,
+      "entities": 11,
+      "min_ms": 23.441322,
+      "median_ms": 23.791156,
+      "p99_ms": 25.02401,
+      "max_ms": 25.02401,
+      "mean_ms": 23.796158000000002,
+      "stddev_ms": 0.4182574546434688
+    },
+    {
+      "name": "physics_50_bodies",
+      "samples": 12,
+      "steps_per_sample": 60,
+      "warmup": 5,
+      "entities": 51,
+      "min_ms": 173.026296,
+      "median_ms": 175.023894,
+      "p99_ms": 176.708253,
+      "max_ms": 176.708253,
+      "mean_ms": 174.87634649999998,
+      "stddev_ms": 1.1674437909593665
+    },
+    {
+      "name": "scripts_20_plus_physics_20",
+      "samples": 12,
+      "steps_per_sample": 60,
+      "warmup": 5,
+      "entities": 41,
+      "min_ms": 91.417778,
+      "median_ms": 92.652322,
+      "p99_ms": 95.08499300000001,
+      "max_ms": 95.08499300000001,
+      "mean_ms": 93.03598725,
+      "stddev_ms": 1.1519437301740019
+    }
+  ]
+}

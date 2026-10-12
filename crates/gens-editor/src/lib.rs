@@ -29,11 +29,13 @@
 //! registry and the console captures actual `tracing` events.
 
 pub mod assets;
+pub mod commands;
 pub mod console;
 pub mod hierarchy;
 pub mod inspector;
 pub mod model;
 pub mod shell;
+pub mod telemetry;
 pub mod theme;
 pub mod viewport;
 

@@ -16,6 +16,8 @@ members = [
     "crates/gens-networking",
     "crates/gens-editor",
     "crates/gens-runtime",
+    "crates/gens-profiler",
+    "crates/gens-build",
 ]
 
 [workspace.package]
@@ -63,6 +65,8 @@ gens-ai = { path = "crates/gens-ai", version = "0.1.0" }
 gens-scripting = { path = "crates/gens-scripting", version = "0.1.0" }
 gens-assets = { path = "crates/gens-assets", version = "0.1.0" }
 gens-networking = { path = "crates/gens-networking", version = "0.1.0" }
+gens-profiler = { path = "crates/gens-profiler", version = "0.1.0" }
+gens-build = { path = "crates/gens-build", version = "0.1.0" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -70,6 +74,16 @@ unsafe_code = "forbid"
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
 # Enforced as `-D warnings` by CI and scripts/verify.sh.
+
+# Phase 8 build pipeline: line-tables-only debuginfo for the dev profile.
+# Full debuginfo on the 16-crate workspace (wgpu+egui+rhai+quinn linked by
+# examples) overflows 10 GB sandboxes during verify.sh (R-02x: ENOSPC /
+# linker Bus error twice this phase). Line tables keep backtraces
+# symbolized, cut target/ roughly in half, and change nothing at runtime;
+# the ADR-0012 debug binary-size gate is re-baselined honestly in
+# docs/PHASE_8_REPORT.md.
+[profile.dev]
+debug = 1
 
 [profile.release]
 lto = "thin"

@@ -206,7 +206,11 @@ impl AssetRegistry {
 /// Infers the [`AssetKind`] from a canonical key's extension.
 /// Unknown extensions are `Raw` (the caller can always register an
 /// explicit kind via [`AssetRegistry::import`]).
-fn kind_from_path(key: &str) -> AssetKind {
+///
+/// Public since Phase 8: the build pipeline's CLI must infer kinds
+/// exactly as the registry does (one source of truth, same rationale as
+/// [`canonicalize_key`]).
+pub fn kind_from_path(key: &str) -> AssetKind {
     let ext = key.rsplit('.').next().unwrap_or("");
     match ext {
         "gltf" | "glb" => AssetKind::GlTF,
@@ -220,8 +224,14 @@ fn kind_from_path(key: &str) -> AssetKind {
     }
 }
 
-/// Normalizes a key: forward slashes, no leading `./`, no trailing slash.
-fn canonicalize_key(key: &str) -> Result<String, AssetError> {
+/// Normalizes a key: forward slashes, no leading `./`, no trailing slash,
+/// no `//`, non-empty.
+///
+/// Public since Phase 8: the build pipeline's package builder must apply
+/// the EXACT same key rule as the registry (one source of truth — a
+/// package whose keys the registry would reject must fail at build time,
+/// not at load time).
+pub fn canonicalize_key(key: &str) -> Result<String, AssetError> {
     let cleaned = key.replace('\\', "/");
     let cleaned = cleaned.strip_prefix("./").unwrap_or(&cleaned);
     if cleaned.is_empty() || cleaned.ends_with('/') || cleaned.contains("//") {

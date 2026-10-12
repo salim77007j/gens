@@ -925,6 +925,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "gens-build"
+version = "0.1.0"
+dependencies = [
+ "gens-assets",
+ "gens-core",
+ "gens-ecs",
+ "gens-profiler",
+ "gens-runtime",
+ "gens-scripting",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
 name = "gens-core"
 version = "0.1.0"
 dependencies = [
@@ -953,12 +969,15 @@ dependencies = [
  "gens-ecs",
  "gens-math",
  "gens-physics",
+ "gens-profiler",
  "gens-renderer",
  "gens-runtime",
  "gens-scripting",
  "gens-ui",
  "glam 0.34.1",
  "image",
+ "serde",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
  "wgpu",
@@ -1005,6 +1024,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gens-profiler"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "gens-renderer"
 version = "0.1.0"
 dependencies = [
@@ -1028,6 +1055,7 @@ dependencies = [
  "gens-math",
  "gens-networking",
  "gens-physics",
+ "gens-profiler",
  "gens-renderer",
  "gens-scripting",
  "gens-ui",

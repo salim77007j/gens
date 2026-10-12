@@ -89,13 +89,24 @@ fn main() -> Result<()> {
         final_fnv = format!("{:016x}", run_a.frame_hashes.last().copied().unwrap_or(0)),
         "determinism verified: two runs byte-identical"
     );
+    ensure!(
+        run_a.validated_clean,
+        "the console 'validate' command must report a clean world"
+    );
+    info!("console command gate: 'validate' reported 0 violations");
 
+    // The profile sidecar is observation-only (ADR-0027): its timings
+    // differ between runs BY DESIGN and are never hashed; the frame
+    // hashes above are the determinism contract.
+    let profile_json =
+        serde_json::to_string(&run_a.profile).context("profile sidecar serialize")?;
     let json = format!(
-        "{{\n  \"steps\": {steps},\n  \"window\": [{}, {}],\n  \"selection\": \"Spaceship\",\n  \"duplicated\": \"{}\",\n  \"clicked\": {},\n  \"frame_fnv1a64\": [{}],\n  \"final_fnv1a64\": \"{}\",\n  \"deterministic\": true\n}}\n",
+        "{{\n  \"steps\": {steps},\n  \"window\": [{}, {}],\n  \"selection\": \"Spaceship\",\n  \"duplicated\": \"{}\",\n  \"clicked\": {},\n  \"validated_clean\": {},\n  \"frame_fnv1a64\": [{}],\n  \"final_fnv1a64\": \"{}\",\n  \"deterministic\": true,\n  \"profile_sidecar\": {}\n}}\n",
         WINDOW_SIZE[0],
         WINDOW_SIZE[1],
         run_a.duplicated_name,
         run_a.clicked,
+        run_a.validated_clean,
         run_a
             .frame_hashes
             .iter()
@@ -103,6 +114,7 @@ fn main() -> Result<()> {
             .collect::<Vec<_>>()
             .join(", "),
         run_a.frame_hashes.last().copied().unwrap_or(0),
+        profile_json,
     );
     std::fs::write(format!("{}.json", out_dir.display()), json).context("writing evidence json")?;
     info!(?out_dir, "editor hello complete");
@@ -113,6 +125,11 @@ struct RunReport {
     frame_hashes: Vec<u64>,
     duplicated_name: String,
     clicked: bool,
+    validated_clean: bool,
+    /// Observation-only sidecar (ADR-0027): the run's per-phase profile.
+    /// Never hashed — two runs' timings differ by design; their PIXELS
+    /// must not.
+    profile: gens_profiler::ProfileReport,
 }
 
 /// One full editor session (build -> replay -> evidence).
@@ -144,6 +161,14 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
     let mut duplicated_name = String::new();
     let mut error: Option<anyhow_crate::Error> = None;
     let mut step_done: usize = 0;
+    let mut validated_clean = false;
+    // Observation-only profiler (ADR-0027): records per-phase wall-clock
+    // spans as SIDECAR data. The replay's rendered pixels stay
+    // deterministic — the shell's telemetry panels intentionally stay in
+    // their honest "no data" state during hashed replays, because CPU/Mem
+    // numbers are wall-clock and would break byte-identity. The UI-with-
+    // data path is proven by geometry tests (ADR-0026).
+    let mut profiler = gens_profiler::Profiler::enabled();
 
     tracing::subscriber::with_default(subscriber, || {
         info!("engine initialized");
@@ -174,6 +199,10 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
                         "autosave_001.genssave".to_string(),
                     ));
                 }
+                if step + 1 == steps {
+                    // Same intent the command row's Run button queues.
+                    shell.state.pending_commands.push("validate".into());
+                }
                 for command in shell.state.take_commands() {
                     match command {
                         EditorCommand::SaveScene(path) => {
@@ -198,6 +227,17 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
                             }
                         }
                     }
+                }
+                // Console commands (real execution against the world; the
+                // results land in the console via the tracing sink).
+                gens_editor::commands::drain_commands(&mut shell.state, &mut world, Some(&assets));
+                if step + 1 == steps {
+                    validated_clean = shell
+                        .state
+                        .console
+                        .lines()
+                        .iter()
+                        .any(|l| l.message.contains("validation: 0 violations"));
                 }
                 if step == 15 {
                     // The inspector's write path: move the ship (visible in
@@ -228,8 +268,11 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
                 }
 
                 // --- Simulation ---------------------------------------------
-                world.resource_mut::<PhysicsResource>().world.step();
-                schedules.run_frame(&mut world);
+                profiler.begin_frame(step as u64);
+                profiler.time("physics", |_| {
+                    world.resource_mut::<PhysicsResource>().world.step();
+                });
+                profiler.time("propagation", |_| schedules.run_frame(&mut world));
                 shell.state.stats.step += 1;
 
                 // --- Editor frame -------------------------------------------
@@ -239,7 +282,9 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
                     size_px: WINDOW_SIZE,
                     events,
                 };
-                match shell.frame(input, &mut world, &assets) {
+                let frame_result =
+                    profiler.time("editor_ui", |_| shell.frame(input, &mut world, &assets));
+                match frame_result {
                     Ok(pixels) => {
                         frame_hashes.push(fnv1a64(&pixels));
                         if capture_png && step + 1 == steps {
@@ -269,6 +314,7 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
                         return;
                     }
                 }
+                profiler.end_frame();
                 step_done += 1;
             });
             if error.is_some() {
@@ -284,10 +330,13 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
         step_done == steps,
         "run stopped early: {step_done}/{steps} frames"
     );
+    let profile = gens_profiler::report::report_from_history(profiler.history());
     Ok(RunReport {
         frame_hashes,
         duplicated_name,
         clicked,
+        validated_clean,
+        profile,
     })
 }
 

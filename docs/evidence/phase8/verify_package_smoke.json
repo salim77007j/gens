@@ -1,0 +1,57 @@
+{
+  "format": "gens-run-report-1",
+  "package": {
+    "name": "package-hello",
+    "scene_key": "scenes/hello.json",
+    "engine_version": "0.1.0",
+    "files": 2
+  },
+  "run": {
+    "steps": 300,
+    "entities": 5,
+    "script_ticks": 300,
+    "final_hash": 6753991521350119368,
+    "violations": []
+  },
+  "profile": {
+    "format": "gens-profile-1",
+    "frames": 300,
+    "frame_us": {
+      "min_us": 82,
+      "median_us": 85,
+      "p99_us": 149,
+      "max_us": 387
+    },
+    "spans": [
+      {
+        "name": "propagation",
+        "count": 300,
+        "present_frames": 300,
+        "min_us": 17,
+        "median_us": 18,
+        "p99_us": 34,
+        "max_us": 164,
+        "share_of_frame": 0.21076375427342897
+      },
+      {
+        "name": "scripts",
+        "count": 300,
+        "present_frames": 300,
+        "min_us": 39,
+        "median_us": 40,
+        "p99_us": 92,
+        "max_us": 176,
+        "share_of_frame": 0.49148838684664997
+      }
+    ]
+  },
+  "memory": {
+    "format": "gens-mem-1",
+    "current_bytes": 210255,
+    "peak_bytes": 221405,
+    "allocations": 38009,
+    "deallocations": 36719,
+    "total_allocated_bytes": 2706102,
+    "total_deallocated_bytes": 2495847
+  }
+}

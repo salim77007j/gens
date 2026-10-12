@@ -1,0 +1,57 @@
+{
+  "format": "gens-run-report-1",
+  "package": {
+    "name": "cli-demo",
+    "scene_key": "scenes/mover.json",
+    "engine_version": "0.1.0",
+    "files": 2
+  },
+  "run": {
+    "steps": 300,
+    "entities": 5,
+    "script_ticks": 300,
+    "final_hash": 8782482481264818548,
+    "violations": []
+  },
+  "profile": {
+    "format": "gens-profile-1",
+    "frames": 300,
+    "frame_us": {
+      "min_us": 83,
+      "median_us": 86,
+      "p99_us": 161,
+      "max_us": 353
+    },
+    "spans": [
+      {
+        "name": "propagation",
+        "count": 300,
+        "present_frames": 300,
+        "min_us": 17,
+        "median_us": 18,
+        "p99_us": 45,
+        "max_us": 124,
+        "share_of_frame": 0.21099704193492258
+      },
+      {
+        "name": "scripts",
+        "count": 300,
+        "present_frames": 300,
+        "min_us": 39,
+        "median_us": 41,
+        "p99_us": 86,
+        "max_us": 167,
+        "share_of_frame": 0.48926396380720377
+      }
+    ]
+  },
+  "memory": {
+    "format": "gens-mem-1",
+    "current_bytes": 207505,
+    "peak_bytes": 218655,
+    "allocations": 37958,
+    "deallocations": 36676,
+    "total_allocated_bytes": 2700077,
+    "total_deallocated_bytes": 2492572
+  }
+}

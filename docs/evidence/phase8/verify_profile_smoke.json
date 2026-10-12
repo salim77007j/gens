@@ -1,0 +1,67 @@
+{
+  "format": "gens-profile-hello-1",
+  "steps": 600,
+  "entities": 3,
+  "proof": {
+    "hashes_per_run": 600,
+    "identical": true,
+    "final_hash": 11319792849317393279,
+    "span_names": [
+      "ecs_post_update",
+      "ecs_update",
+      "physics_step"
+    ],
+    "violations": []
+  },
+  "profile": {
+    "format": "gens-profile-1",
+    "frames": 600,
+    "frame_us": {
+      "min_us": 64,
+      "median_us": 326,
+      "p99_us": 820,
+      "max_us": 1570
+    },
+    "spans": [
+      {
+        "name": "ecs_post_update",
+        "count": 600,
+        "present_frames": 600,
+        "min_us": 16,
+        "median_us": 27,
+        "p99_us": 48,
+        "max_us": 158,
+        "share_of_frame": 0.07597109475760565
+      },
+      {
+        "name": "ecs_update",
+        "count": 600,
+        "present_frames": 600,
+        "min_us": 3,
+        "median_us": 8,
+        "p99_us": 27,
+        "max_us": 310,
+        "share_of_frame": 0.025154578560048553
+      },
+      {
+        "name": "physics_step",
+        "count": 600,
+        "present_frames": 600,
+        "min_us": 12,
+        "median_us": 245,
+        "p99_us": 705,
+        "max_us": 1271,
+        "share_of_frame": 0.7800479857370457
+      }
+    ]
+  },
+  "memory": {
+    "format": "gens-mem-1",
+    "current_bytes": 726644,
+    "peak_bytes": 756433,
+    "allocations": 150991,
+    "deallocations": 148288,
+    "total_allocated_bytes": 7693800,
+    "total_deallocated_bytes": 6967156
+  }
+}
