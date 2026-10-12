@@ -22,7 +22,12 @@
 //! functions of content.
 
 pub mod cert;
+pub mod session;
 pub mod transport;
 
 pub use cert::{LOOPBACK_SERVER_NAME, LoopbackCert};
+pub use session::{
+    Envelope, IncomingMessage, MsgKind, SESSION_PROTOCOL_VERSION, Session, SessionError,
+    SessionResult, decode_envelope, encode_envelope,
+};
 pub use transport::{MAX_FRAME_BYTES, QuicEndpoint, QuicLink, TransportError, TransportResult};
