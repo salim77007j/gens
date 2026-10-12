@@ -131,6 +131,7 @@ impl ScriptHost {
     pub fn new() -> ScriptHost {
         let current: FrameSlot = Arc::new(Mutex::new(None));
         let mut engine = ScriptEngine::new();
+        register_math_api(&mut engine);
         register_entity_api(&mut engine, Arc::clone(&current));
         ScriptHost {
             engine,
@@ -174,6 +175,25 @@ impl ScriptHost {
     pub fn engine(&self) -> &ScriptEngine {
         &self.engine
     }
+}
+
+/// Registers the CLOSED math vocabulary scripts may use.
+///
+/// `Engine::new_raw()` ships no packages, so even `sqrt`/`floor` are
+/// absent by default — the host exposes exactly these, all thin libm
+/// calls (deterministic within a process; the R-013 scope).
+fn register_math_api(engine: &mut ScriptEngine) {
+    let e = engine.engine_mut();
+    e.register_fn("sqrt", |v: f64| v.sqrt());
+    e.register_fn("floor", |v: f64| v.floor());
+    e.register_fn("ceil", |v: f64| v.ceil());
+    e.register_fn("abs", |v: f64| v.abs());
+    e.register_fn("min", |a: f64, b: f64| a.min(b));
+    e.register_fn("max", |a: f64, b: f64| a.max(b));
+    // Integer conversion (rhai has no cast operator; to_int/to_float
+    // live in packages the sandbox does not load).
+    e.register_fn("to_int", |v: f64| v as i64);
+    e.register_fn("to_float", |v: i64| v as f64);
 }
 
 /// Registers the entity API: the ONLY functions a script may call
@@ -509,6 +529,22 @@ mod tests {
             .iter()
             .map(|e| f64::from(world.get::<Transform>(*e).expect("alive").position.x))
             .collect()
+    }
+
+    #[test]
+    fn math_vocabulary_works_and_is_deterministic() {
+        // new_raw ships no packages — even sqrt/floor are absent
+        // unless the host exposes them. The vocabulary is a plain
+        // engine surface (no frame needed: math fns touch no state).
+        let mut host = ScriptHost::new();
+        host.register("m", "fn g(x) { sqrt(x) * floor(x) + min(x, 9.0) }")
+            .expect("compiles");
+        let script = host.get("m").expect("registered").clone();
+        let a: f64 = host.engine().call_fn(&script, "g", (2.5,)).expect("call");
+        let b: f64 = host.engine().call_fn(&script, "g", (2.5,)).expect("call");
+        // sqrt(2.5) ~= 1.5811, floor(2.5) = 2, min(2.5, 9) = 2.5.
+        assert!((a - (2.5_f64.sqrt() * 2.0 + 2.5)).abs() < 1e-12);
+        assert_eq!(a, b);
     }
 
     #[test]
