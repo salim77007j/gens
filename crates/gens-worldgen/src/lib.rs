@@ -32,3 +32,18 @@
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 #![warn(missing_docs)]
+
+/// The shared easing primitive: `t*t*(3-2t)` on a clamped `t`.
+///
+/// Plain arithmetic (ADR-0031's no-transcendentals rule covers it by
+/// construction); used by the noise interpolator and exposed for the
+/// scatter layer's density edges.
+#[must_use]
+pub(crate) fn smoothstep01(t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
+pub mod heightfield;
+pub mod noise;
+pub mod scatter;
