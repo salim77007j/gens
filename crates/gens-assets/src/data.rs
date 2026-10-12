@@ -60,6 +60,12 @@ pub struct DataEntity {
     /// Entity name, unique within the document (the bridge looks
     /// entities up by name when scripts cross-reference).
     pub name: String,
+    /// Whether the entity spawns with the `Active` marker (default true).
+    #[serde(default = "default_true")]
+    pub active: bool,
+    /// Optional free-form tag, same vocabulary as the save format.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
     /// Local translation, `[x, y, z]`, all finite.
     #[serde(default = "default_translation")]
     pub translation: [f32; 3],
@@ -120,6 +126,10 @@ fn default_translation() -> [f32; 3] {
     [0.0, 0.0, 0.0]
 }
 
+fn default_true() -> bool {
+    true
+}
+
 fn default_rotation() -> [f32; 4] {
     // Identity quaternion (x, y, z, w).
     [0.0, 0.0, 0.0, 1.0]
@@ -127,6 +137,22 @@ fn default_rotation() -> [f32; 4] {
 
 fn default_scale() -> [f32; 3] {
     [1.0, 1.0, 1.0]
+}
+
+impl DataEntity {
+    /// A helper for tests and programmatic construction: a fully
+    /// defaulted entity with `name` and nothing else.
+    pub fn named(name: impl Into<String>) -> DataEntity {
+        DataEntity {
+            name: name.into(),
+            active: true,
+            tag: None,
+            translation: default_translation(),
+            rotation: default_rotation(),
+            scale: default_scale(),
+            script: None,
+        }
+    }
 }
 
 impl DataDocument {
@@ -306,11 +332,13 @@ mod tests {
         assert_eq!(script.script, "scripts/patrol.rhai");
         assert_eq!(script.entry, "tick");
         assert_eq!(script.vars.len(), 3);
-        // floor: defaults applied for the omitted TRS fields
+        // floor: defaults applied for the omitted fields
         let floor = &doc.entities[1];
         assert_eq!(floor.translation, [0.0, -1.0, 0.0]);
         assert_eq!(floor.rotation, [0.0, 0.0, 0.0, 1.0]);
         assert_eq!(floor.scale, [1.0, 1.0, 1.0]);
+        assert!(floor.active, "active defaults to true");
+        assert!(floor.tag.is_none());
         assert!(floor.script.is_none());
     }
 
@@ -364,22 +392,7 @@ mod tests {
         let doc = DataDocument {
             format_version: 1,
             name: "s".into(),
-            entities: vec![
-                DataEntity {
-                    name: "ok".into(),
-                    translation: default_translation(),
-                    rotation: default_rotation(),
-                    scale: default_scale(),
-                    script: None,
-                },
-                DataEntity {
-                    name: String::new(),
-                    translation: default_translation(),
-                    rotation: default_rotation(),
-                    scale: default_scale(),
-                    script: None,
-                },
-            ],
+            entities: vec![DataEntity::named("ok"), DataEntity::named("")],
         };
         assert!(matches!(
             doc.validate(),
@@ -389,22 +402,28 @@ mod tests {
 
     #[test]
     fn rejects_duplicate_entity_names() {
-        let mk = |name: &str| DataEntity {
-            name: name.into(),
-            translation: default_translation(),
-            rotation: default_rotation(),
-            scale: default_scale(),
-            script: None,
-        };
         let doc = DataDocument {
             format_version: 1,
             name: "s".into(),
-            entities: vec![mk("twice"), mk("twice")],
+            entities: vec![DataEntity::named("twice"), DataEntity::named("twice")],
         };
         assert!(matches!(
             doc.validate(),
             Err(DataError::DuplicateEntityName { name }) if name == "twice"
         ));
+    }
+
+    #[test]
+    fn tag_and_active_round_trip() {
+        let json = r#"{"format_version":1,"name":"s","entities":[{"name":"a","active":false,"tag":"obstacle"}]}"#;
+        let doc = parse(json);
+        let e = &doc.entities[0];
+        assert!(!e.active);
+        assert_eq!(e.tag.as_deref(), Some("obstacle"));
+        // Canonical form keeps the fields stable for re-parse.
+        let ca = doc.canonical_json().unwrap();
+        let reparsed: DataDocument = serde_json::from_str(&ca).unwrap();
+        assert_eq!(reparsed, doc);
     }
 
     #[test]
