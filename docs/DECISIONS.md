@@ -282,3 +282,33 @@ This file is append-only: decisions are superseded by new ADRs, never rewritten.
 - **Context:** World persistence must be byte-deterministic (saves as evidence), crash-safe, and decoupled from engine internals so the format can evolve. bevy 0.16+ stores resources AS entities (they occupy entity slots); `WorldTransform` is derived state.
 - **Decision:** a save is `GENSSAVE1\n` + JSON body + `GENSHASH fnv1a64(body)\n`, all verified on load, written atomically (temp + rename). The body uses MIRROR types (`SavedTransform` arrays, `SavedScript {script, entry, vars, requests}`) — not live ECS types. `capture_world` sorts entities by index (archetype order is not deterministic); `apply_save` spawns into a FRESH world; derived state (`WorldTransform`, animation poses) is never saved and re-derived after load. Scope: the engine-standard component vocabulary (name/active/tag/transform/script) — game state that must survive save/load travels through `ScriptComponent::vars`; a reflection/registry layer for arbitrary components is future work, stated here rather than faked.
 - **Consequences:** identical world state → byte-identical files; the save/load continuation property (fresh world + save + remaining steps == uninterrupted run) is pinned by `asset_script_hello` on every push across three OS; resource entities carry no saveable components and are excluded by construction; format evolution starts at `GENSSAVE1` versioning with a loud `BadVersion` rejection.
+
+## ADR-0022 — Networking: quinn/QUIC loopback-first behind a synchronous facade
+
+**Status:** Accepted (Phase 6)
+
+**Context.** The README roadmap gives Phase 6 "Networking + data assets"; the engine itself is synchronous (pollster-style blocking at the wgpu boundary) and CI runs on three operating systems with no external network contract. Real-socket verification is required — a mock-only transport would prove nothing about QUIC on Windows/macOS/Linux runners.
+
+**Decision.** Transport = quinn 0.11 (QUIC over UDP) pinned to the `rustls-ring` provider, paired with rcgen `ring` for in-memory self-signed loopback certificates. Every endpoint owns a dedicated I/O thread whose tokio `current_thread` runtime is driven for the endpoint's whole lifetime; the public API is synchronous (`send_frame`/`recv_frame`/`close`) with explicit timeouts. Three constraints are load-bearing and documented in the module: quinn transmits only while its runtime is driven; QUIC announces streams on the first written byte (hence the link's announce frame); runtime drop cancels queued teardown frames (hence graceful `Shutdown` + join).
+
+**Consequences.** The engine never sees async; tokio is confined to gens-networking internals. Loopback-only is a stated scope (R-025): NAT traversal, congestion profiles and hardening are future work. Frames are FNV-verified independent of TLS (integrity discipline identical to assets/save). One caller per endpoint at a time; per-link FIFO managers preserve ordering.
+
+## ADR-0023 — Data assets: versioned JSON scene documents on the registry
+
+**Status:** Accepted (Phase 6)
+
+**Context.** Phase 5's report pointed data-driven content at the registry identity discipline (FNV key + content hash + version). A scene format needs to cover the engine-standard component vocabulary without becoming a reflection system (R-023), and without coupling the asset crate to the scripting engine.
+
+**Decision.** `DataDocument` (JSON, `format_version` 1): entities in authored order — name (unique), `active`, optional `tag`, TRS (unit-quat tolerance 1e-4, non-zero finite scale), optional script binding with a mirror variable vocabulary (`Number(f64)`/`Flag`/`Text`). Validation is loud and happens BEFORE registry registration; canonical JSON is byte-stable (struct order + `BTreeMap`). The `.json` extension maps to `Data` (the previously unused `UiLayout` kind keeps `.uilayout`). Instantiation is a runtime bridge (`gens-runtime::data`) symmetric with the save format, byte-equal to it by construction.
+
+**Consequences.** Scenes are pure functions of content (hashable, replicable, evidence-friendly). Game-specific components still travel through script variables — the reflection/registry layer remains future work (R-023), stated honestly rather than faked.
+
+## ADR-0024 — Session protocol: strict vocabulary, version-pinned handshake, independent hash
+
+**Status:** Accepted (Phase 6)
+
+**Context.** The transport moves verified frames; sessions need identity (who am I talking to, which protocol), semantics (what is in a frame) and end-to-end integrity that survives a transport swap.
+
+**Decision.** Handshake: client `HELLO "GENH"+version` → host `WELCOME "GENW"+version+session_id` or `REJECT "GENR"+reason`; version mismatches are loud on both sides. Envelopes: `tick u64 | kind u8 | payload_len u32 | payload_hash u64 | payload` with a STRICT kind vocabulary (Snapshot/Input/Bye) — unknown kinds are protocol errors, deliberately without a `Custom(u8)` escape. The payload hash is computed by the session layer independently of the transport's per-frame hash.
+
+**Consequences.** Two builds that disagree about the protocol fail at handshake or at the first unknown kind instead of corrupting each other. The double hash costs 8 bytes per message and a recompute per receive — negligible at engine message rates and deliberate (belt and suspenders). Ticks and session ids are caller/host-assigned: the session layer invents no identity and reads no clock.

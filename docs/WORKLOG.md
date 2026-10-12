@@ -344,3 +344,8 @@ Rules:
 - WHAT: ci.yml new step runs net_hello (--steps 600 --replicate-at 300) on EVERY OS (loopback QUIC, no external network; smoke_net.json joins the artifacts); verify.sh renumbered to 11 gates with [9/11] mirroring the smoke.
 - WHY: every push exercises the networking pillar on all platforms (ADR-0004); the wire-continuation replay makes each 3-OS run a cross-platform consistency witness.
 - EVIDENCE: local verify.sh PASS (11 gates, net smoke 1571 B replication evidence); this commit; branch CI run.
+
+### [phase6] phase docs + evidence (P6-7)
+- WHAT: PHASE_6_REPORT.md (delivery sections, honest scorecard incl. NOT-claimed scope, numbers, 8-item issue log, run ledger, decisions/risks delta, Phase 7 handoff); ADR-0022 (quinn loopback-first behind a sync facade with a permanently-driven I/O thread), ADR-0023 (versioned JSON scene documents on the registry), ADR-0024 (strict session vocabulary + version-pinned handshake + transport-independent envelope hash); RISKS R-013 Phase 6 note + new R-025 (loopback-only scope), R-026 (quinn/tokio churn), R-027 (replication scope); README status banner (fixed the stale Phase-3 text) + roadmap row 6 + net_hello build docs; evidence ledger docs/evidence/phase6/ci-runs.txt.
+- WHY: governance reconciliation at phase end (ADR-0007).
+- EVIDENCE: runs #69–#76 all green; workspace 300 passed / 0 failed / 8 ignored (GPU); this commit; branch CI run.
