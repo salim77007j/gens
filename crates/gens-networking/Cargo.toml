@@ -1,12 +1,22 @@
 [package]
 name = "gens-networking"
-description = "Sessions, replication and transport"
+description = "Sessions, replication and transport (QUIC loopback-first, Phase 6)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+quinn = { workspace = true }
+rcgen = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+gens-assets = { workspace = true }
 
 [lints]
 workspace = true

@@ -43,6 +43,12 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 rhai = { version = "1.26.1", default-features = false, features = ["std", "sync"] }
 gltf = "1.4.1"
+# Phase 6 (networking + data assets): QUIC transport stack.
+# Async is confined to gens-networking internals (sync facade for the engine,
+# ADR-0022); the runtime is current_thread and owned by the endpoint.
+tokio = { version = "1.53.2", default-features = false, features = ["rt", "net", "time", "sync", "macros"] }
+quinn = { version = "0.11.12", default-features = false, features = ["runtime-tokio", "rustls"] }
+rcgen = { version = "0.14.10", default-features = false, features = ["pem", "ring"] }
 
 gens-core = { path = "crates/gens-core", version = "0.1.0" }
 gens-ecs = { path = "crates/gens-ecs", version = "0.1.0" }
@@ -56,6 +62,7 @@ gens-ui = { path = "crates/gens-ui", version = "0.1.0" }
 gens-ai = { path = "crates/gens-ai", version = "0.1.0" }
 gens-scripting = { path = "crates/gens-scripting", version = "0.1.0" }
 gens-assets = { path = "crates/gens-assets", version = "0.1.0" }
+gens-networking = { path = "crates/gens-networking", version = "0.1.0" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
