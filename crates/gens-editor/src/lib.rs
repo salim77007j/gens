@@ -28,4 +28,14 @@
 //! components, the asset browser mirrors the actual [`gens_assets`]
 //! registry and the console captures actual `tracing` events.
 
+pub mod assets;
+pub mod console;
+pub mod hierarchy;
+pub mod inspector;
+pub mod model;
+pub mod shell;
 pub mod theme;
+pub mod viewport;
+
+pub use model::{AuthoredBody, EditorCommand, MeshSlot, ShapeKind};
+pub use shell::{BottomTab, EditorShell, EditorState, FrameStats, ViewTab};

@@ -12,6 +12,7 @@ authors.workspace = true
 workspace = true
 
 [dependencies]
+bevy_ecs.workspace = true
 egui.workspace = true
 gens-assets.workspace = true
 gens-core.workspace = true
