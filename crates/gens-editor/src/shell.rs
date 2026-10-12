@@ -19,7 +19,7 @@
 //! too). Docks can be toggled from the View menu — that is real state,
 //! persisted nowhere (the editor is session-scoped, like the reference).
 
-use crate::{model::EditorCommand, theme};
+use crate::{model::EditorCommand, theme, viewport::EditorViewport};
 use gens_assets::AssetRegistry;
 use gens_ecs::prelude::*;
 use gens_renderer::{GpuContext, Renderer};
@@ -124,6 +124,10 @@ pub struct EditorState {
     pub show_bottom_dock: bool,
     /// Deterministic counters for the status bar.
     pub stats: FrameStats,
+    /// Orbit camera parameters (scripted-replayable camera state).
+    pub orbit: crate::viewport::OrbitCam,
+    /// Viewport render size in pixels (fed back from the widget rect).
+    pub viewport_size_px: [u32; 2],
     /// Hierarchy row rects captured from layout, by node name — the
     /// scripted-replay seam for real UI clicks (P4-6 lesson: probe
     /// layout-captured rects, never hardcoded pixel guesses).
@@ -141,6 +145,8 @@ impl EditorState {
             show_hierarchy: true,
             show_inspector: true,
             show_bottom_dock: true,
+            orbit: crate::viewport::OrbitCam::default(),
+            viewport_size_px: crate::viewport::DEFAULT_SIZE,
             ..Default::default()
         }
     }
@@ -157,6 +163,8 @@ pub struct EditorShell {
     pub ui: UiRenderer,
     /// The full-window offscreen target the UI paints onto.
     window_renderer: Renderer,
+    /// The dedicated 3D viewport renderer (ADR-0025: two targets).
+    pub viewport: EditorViewport,
     /// All panel/session state.
     pub state: EditorState,
 }
@@ -168,11 +176,13 @@ impl EditorShell {
     /// Propagates wgpu device/target creation failures.
     pub fn new(window_ctx: GpuContext, width: u32, height: u32) -> gens_core::anyhow::Result<Self> {
         let window_renderer = Renderer::new(window_ctx, width, height)?;
+        let viewport = EditorViewport::new()?;
         let mut ui = UiRenderer::new();
         theme::apply(ui.core_mut().ctx());
         Ok(Self {
             ui,
             window_renderer,
+            viewport,
             state: EditorState::new(),
         })
     }
@@ -201,19 +211,25 @@ impl EditorShell {
             ui,
             window_renderer,
             state,
+            viewport,
         } = self;
+        // The 3D viewport renders FIRST (own target); its pixels become
+        // an egui texture; then the whole editor UI paints over them.
+        viewport.render(ui.core_mut().ctx(), state, world)?;
         // UiRenderer::render takes `impl Fn` (one paint call per pass, no
         // re-entrant borrows) — the same constraint the Phase 4 HUD met.
         // State and world travel through RefCells so panels can mutate
         // the REAL world mid-pass; both come back out afterwards.
         let state_cell = RefCell::new(std::mem::take(state));
         let world_cell = RefCell::new(std::mem::take(world));
+        let viewport_ref: &EditorViewport = viewport;
         let render = ui.render(window_renderer, clear, input, |ui| {
             paint(
                 ui,
                 &mut state_cell.borrow_mut(),
                 &mut world_cell.borrow_mut(),
                 assets,
+                viewport_ref,
             );
         })?;
         *state = state_cell.into_inner();
@@ -224,7 +240,13 @@ impl EditorShell {
 }
 
 /// Paints one whole editor frame into the root UI.
-fn paint(ui: &mut egui::Ui, state: &mut EditorState, world: &mut World, assets: &AssetRegistry) {
+fn paint(
+    ui: &mut egui::Ui,
+    state: &mut EditorState,
+    world: &mut World,
+    assets: &AssetRegistry,
+    viewport: &EditorViewport,
+) {
     menu_bar(ui, state);
     status_bar(ui, state);
     if state.show_bottom_dock {
@@ -236,7 +258,7 @@ fn paint(ui: &mut egui::Ui, state: &mut EditorState, world: &mut World, assets: 
     if state.show_inspector {
         crate::inspector::panel(ui, state, world);
     }
-    center_dock(ui, state);
+    center_dock(ui, state, viewport, world);
     let _ = assets; // consumed by the bottom dock from P7-5 on
 }
 
@@ -351,7 +373,12 @@ fn bottom_dock(ui: &mut egui::Ui, state: &mut EditorState) {
 }
 
 /// Center dock: view tabs row, then the active tab's content.
-fn center_dock(ui: &mut egui::Ui, state: &mut EditorState) {
+fn center_dock(
+    ui: &mut egui::Ui,
+    state: &mut EditorState,
+    viewport: &EditorViewport,
+    world: &mut World,
+) {
     egui::CentralPanel::default()
         .frame(egui::Frame::default().fill(theme::PANEL_BG).inner_margin(egui::Margin::same(4)))
         .show(ui, |ui| {
@@ -366,7 +393,9 @@ fn center_dock(ui: &mut egui::Ui, state: &mut EditorState) {
             });
             ui.separator();
             match state.view_tab {
-                Some(ViewTab::Viewport3d) => crate::viewport::panel(ui, state),
+                Some(ViewTab::Viewport3d) => {
+                    viewport.panel(ui, state, world);
+                }
                 Some(ViewTab::GameView) => empty_state(
                     ui,
                     "Game View renders the player camera — Phase 8 scope (profiling + build pipeline ships it alongside the window shell).",

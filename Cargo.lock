@@ -960,6 +960,7 @@ dependencies = [
  "image",
  "tracing",
  "tracing-subscriber",
+ "wgpu",
 ]
 
 [[package]]

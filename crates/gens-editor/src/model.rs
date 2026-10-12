@@ -48,7 +48,7 @@ impl MeshSlot {
 }
 
 /// Which primitive a [`MeshSlot`] draws.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ShapeKind {
     /// Unit cube centered on the transform.
     Cube,
