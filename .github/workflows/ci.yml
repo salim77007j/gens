@@ -158,6 +158,18 @@ jobs:
           test -f smoke_asset_script.json
           echo "asset+script smoke evidence: $(wc -c < smoke_asset_script.json) bytes"
 
+      - name: Headless networking smoke (data document -> QUIC session -> world replication)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # CPU-only by design: the QUIC endpoints talk over 127.0.0.1
+          # with in-memory self-signed certs (no external network); the
+          # replicated snapshot's continuation must replay bit-identically
+          # against the host's uninterrupted run (R-013).
+          cargo run -p gens-runtime --example net_hello -- --steps 600 --replicate-at 300 --out smoke_net.json
+          test -f smoke_net.json
+          echo "net smoke evidence: $(wc -c < smoke_net.json) bytes"
+
       - name: Headless GPU smoke (wgpu offscreen render + PNG)
         if: steps.detect.outputs.active == 'true'
         shell: bash
@@ -188,6 +200,7 @@ jobs:
             smoke_physics.json
             smoke_animate.json
             smoke_asset_script.json
+            smoke_net.json
 
       - name: Binary size gate
         if: steps.detect.outputs.active == 'true'

@@ -88,6 +88,109 @@ pub enum AssetError {
         #[source]
         source: std::io::Error,
     },
+    /// Data-document import failure (parse or validation, Phase 6).
+    #[error("data import failed for {key:?}: {source}")]
+    Data {
+        /// Asset key being imported.
+        key: String,
+        /// What the parser or validator rejected.
+        #[source]
+        source: DataError,
+    },
+}
+
+/// Why a data document was rejected.
+///
+/// Every rule is loud: a document that would import "surprisingly"
+/// (wrong version, duplicate names, degenerate transforms) fails here
+/// instead of producing a world nobody asked for. See module docs of
+/// [`crate::data`] for the format contract.
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum DataError {
+    /// The document's `format_version` is not [`crate::data::DATA_FORMAT_VERSION`].
+    #[error(
+        "unsupported data document format version {found} (supported: {})",
+        crate::data::DATA_FORMAT_VERSION
+    )]
+    UnsupportedVersion {
+        /// Version found in the document.
+        found: u32,
+    },
+    /// The document-level name is empty.
+    #[error("document name must not be empty")]
+    EmptyDocumentName,
+    /// An entity has an empty name.
+    #[error("entity at index {index} has an empty name")]
+    EmptyEntityName {
+        /// Position in the authored entity list.
+        index: usize,
+    },
+    /// Entity names are unique within a document (the runtime bridge
+    /// and scripts cross-reference by name).
+    #[error("duplicate entity name {name:?} (names are unique within a document)")]
+    DuplicateEntityName {
+        /// The repeated name.
+        name: String,
+    },
+    /// A translation component is NaN or infinite.
+    #[error("entity {name:?}: translation contains a non-finite component")]
+    NonFiniteTranslation {
+        /// Offending entity.
+        name: String,
+    },
+    /// A rotation component is NaN or infinite.
+    #[error("entity {name:?}: rotation contains a non-finite component")]
+    NonFiniteRotation {
+        /// Offending entity.
+        name: String,
+    },
+    /// The quaternion's norm deviates from 1 beyond tolerance.
+    #[error(
+        "entity {name:?}: rotation norm {norm} deviates from 1 by more than {tol} (author unit quaternions)"
+    )]
+    NonUnitRotation {
+        /// Offending entity.
+        name: String,
+        /// Measured norm.
+        norm: f32,
+        /// The tolerance that was exceeded ([`crate::data::ROTATION_NORM_TOL`]).
+        tol: f32,
+    },
+    /// A scale component is NaN or infinite.
+    #[error("entity {name:?}: scale contains a non-finite component")]
+    NonFiniteScale {
+        /// Offending entity.
+        name: String,
+    },
+    /// A scale component is exactly zero (collapses geometry;
+    /// produces non-invertible matrices downstream).
+    #[error(
+        "entity {name:?}: scale has a zero component (use an epsilon; zero collapses geometry)"
+    )]
+    ZeroScale {
+        /// Offending entity.
+        name: String,
+    },
+    /// The script binding has an empty registry key.
+    #[error("entity {name:?}: script key is empty")]
+    EmptyScriptKey {
+        /// Offending entity.
+        name: String,
+    },
+    /// The script binding has an empty entry name.
+    #[error("entity {name:?}: script entry is empty")]
+    EmptyScriptEntry {
+        /// Offending entity.
+        name: String,
+    },
+    /// The bytes are not valid JSON.
+    #[error("document is not valid JSON: {source}")]
+    Json {
+        /// serde_json's own diagnostics.
+        #[from]
+        source: serde_json::Error,
+    },
 }
 
 /// The subset of glTF 2.0 this importer accepts, and why it stopped.

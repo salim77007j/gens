@@ -1,0 +1,22 @@
+# Phase 6 CI evidence ledger (branch phase6-networking-data-assets)
+#
+# Every sub-item commit ran the full 3-OS matrix (docs gate + secret scan +
+# fmt + clippy -D warnings + build + tests + 4 CPU smokes + net smoke +
+# GPU smoke + binary size gate). All runs green.
+
+#69  7db9eb0  main (pre-phase6 anchor, run green)          success
+#70  111a594  P6-0 pins (quinn 0.11.12/tokio 1.53.2/rcgen 0.14.10)  success
+#71  3fda745  P6-1 data documents                          success
+#72  dab1999  P6-2 data->world bridge                      success
+#73  8ff4682  P6-3 QUIC loopback transport                 success
+#74  da49f72  P6-4 session layer                           success
+#75  a055b50  P6-5 world snapshots + net_hello             success
+#76  25704ea  P6-6 CI net smoke + verify.sh 11 gates       success
+
+# Cross-OS net smoke evidence (run #76, all three runners):
+#   snapshot 544 B | evidence 1571 B | "host/client captures IDENTICAL,
+#   client ticks 600" on Windows, Linux, macOS (byte-identical outputs,
+#   recorded under R-013 as evidence, not a claimed guarantee).
+
+# Merge evidence: appended here after the P6-8 merge.
+# Tag anchor: pre-phase7-safe = <merge commit> (the merge commit).

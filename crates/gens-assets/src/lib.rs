@@ -11,7 +11,10 @@
 //!   hashing and version bumps on change;
 //! - [`gltf::import_gltf`] — glTF 2.0 import into engine types: meshes
 //!   ([`mesh::MeshData`]), skeletons + clips (gens-animation), and node
-//!   transforms.
+//!   transforms;
+//! - [`data`] (Phase 6) — versioned, validated scene / prefab documents
+//!   ([`data::DataDocument`]) parsed from JSON and registered like any
+//!   other asset.
 //!
 //! Determinism contract: importing the same bytes always produces the
 //! same ids, hashes and engine objects — asset identity is a pure
@@ -19,13 +22,18 @@
 //! File I/O happens only at the registry/import boundary; everything
 //! below it is pure and unit-testable.
 
+pub mod data;
 pub mod error;
 pub mod gltf;
 pub mod hash;
 pub mod mesh;
 pub mod registry;
 
-pub use error::{AssetError, UnsupportedGlTF};
+pub use data::{
+    DATA_FORMAT_VERSION, DataDocument, DataEntity, DataScript, DataVar, ROTATION_NORM_TOL,
+    import_data_document, import_data_document_file, parse_data_document,
+};
+pub use error::{AssetError, DataError, UnsupportedGlTF};
 pub use gltf::{ImportedClip, ImportedGlTF, ImportedMesh, ImportedNode, ImportedSkin};
 pub use hash::fnv1a64;
 pub use mesh::MeshData;

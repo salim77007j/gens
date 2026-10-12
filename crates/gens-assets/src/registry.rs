@@ -41,6 +41,8 @@ impl std::fmt::Display for AssetId {
 pub enum AssetKind {
     /// glTF 2.0 document (scene, meshes, skins, animations).
     GlTF,
+    /// Data-driven scene / prefab document (JSON), Phase 6.
+    Data,
     /// Data-driven UI layout (JSON).
     UiLayout,
     /// Script source (text).
@@ -54,6 +56,7 @@ impl AssetKind {
     pub fn as_str(self) -> &'static str {
         match self {
             AssetKind::GlTF => "gltf",
+            AssetKind::Data => "data",
             AssetKind::UiLayout => "ui_layout",
             AssetKind::Script => "script",
             AssetKind::Raw => "raw",
@@ -207,7 +210,11 @@ fn kind_from_path(key: &str) -> AssetKind {
     let ext = key.rsplit('.').next().unwrap_or("");
     match ext {
         "gltf" | "glb" => AssetKind::GlTF,
-        "json" => AssetKind::UiLayout,
+        // Phase 6: .json is the data-document extension. The UiLayout
+        // kind has no importer yet; it keeps the explicit .uilayout
+        // extension so the two never collide.
+        "json" => AssetKind::Data,
+        "uilayout" => AssetKind::UiLayout,
         "rhai" => AssetKind::Script,
         _ => AssetKind::Raw,
     }
@@ -331,7 +338,8 @@ mod tests {
     #[test]
     fn kind_from_path_inference() {
         assert_eq!(kind_from_path("a/w.gltf"), AssetKind::GlTF);
-        assert_eq!(kind_from_path("a/l.json"), AssetKind::UiLayout);
+        assert_eq!(kind_from_path("a/scene.json"), AssetKind::Data);
+        assert_eq!(kind_from_path("a/hud.uilayout"), AssetKind::UiLayout);
         assert_eq!(kind_from_path("a/s.rhai"), AssetKind::Script);
         assert_eq!(kind_from_path("a/r.xyz"), AssetKind::Raw);
     }
