@@ -956,6 +956,7 @@ dependencies = [
  "gens-renderer",
  "gens-scripting",
  "gens-ui",
+ "glam 0.34.1",
  "image",
  "tracing",
  "tracing-subscriber",
