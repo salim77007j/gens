@@ -1,0 +1,44 @@
+# Phase 4 evidence — CI runs ledger
+
+Every branch run for `phase4-animation-ui-ai`, newest last. Each row was
+verified via the GitHub API (run conclusion + head_sha) before the next
+sub-item started.
+
+| Run | Commit | Scope | Conclusion |
+|---|---|---|---|
+| [#44](https://github.com/salim77007j/gens/actions/runs/38179812604) | 57c12d5 | P4-0 egui 0.36.2 pin + phase-4 crate paths | SUCCESS |
+| [#45](https://github.com/salim77007j/gens/actions/runs) | cd1650c | P4-1 animation skeleton + clips + FK (26 tests) | SUCCESS |
+| #46 | 4e601a4 | P4-2 blending + AnimationController (44 crate tests) | SUCCESS |
+| #47 | a775834 | P4-3 behavior trees (13 tests) | SUCCESS |
+| #48 | 954b384 | P4-4 grid nav + A* + steering (31 crate tests) | SUCCESS |
+| #49 | 2e79152 | P4-5 egui headless core — **FAILED**: 3 clippy lints on all 3 OS (cargo test green; local `clippy \| tail` masked the status) | FAILURE |
+| #50 | 41a5c74 | P4-5b clippy conformance | SUCCESS |
+| #51 | 826a41f | P4-6 UI wgpu backend — **FAILED**: `ui_paints_panel_text_and_button` on lavapipe+Metal: panel fill stored [79,87,101] = encode(20/255): raw byte/255 vertex colors treated as linear | FAILURE |
+| #52 | 76ea201 | P4-6b premultiplied-sRGB decode — **FAILED**: fill round-trip now exact, but hardcoded text-scan row sat above the glyphs | FAILURE |
+| #53 | e724d4a | P4-6c rect-captured pixel scans | SUCCESS |
+| #54 | 758d81d | P4-7 animate_hello integration example | SUCCESS |
+| #55 | 3fae32e | P4-8 CI smoke on 3 OS + verify.sh 9 gates | SUCCESS |
+
+## Cross-OS smoke evidence (run #55)
+
+| Smoke | Windows | Linux | macOS |
+|---|---|---|---|
+| physics trajectory JSON | 29290 B | 29290 B | 29253 B |
+| **animate trajectory JSON** | **4100 B** | **4100 B** | **4100 B** |
+| gpu_hello PNG (structural) | 2088 B | 2084 B | 2090 B |
+
+The animate smoke (AI + animation + UI frame hashes) emitted
+byte-identical evidence on all three operating systems this run; per
+R-013/R-021 this is recorded as evidence, not claimed as a guarantee.
+
+`smoke_animate.json` in this directory is the local sandbox run
+(bit-identical to the CI copies, 4100 B).
+
+## GPU integration tests (run with real adapters, `--ignored`)
+
+- Linux (lavapipe) and macOS (Metal): 8 ignored tests pass — the 6 Phase 2
+  renderer GPU tests plus the 2 new gens-ui tests (`ui_paints_panel_text_and_button`,
+  `ui_hover_changes_pixels_under_pointer`), which render egui text and a
+  button through the new `UiPipeline` offscreen and verify pixels directly.
+- Windows: unit-test job green; GPU tests are skipped there by the existing
+  ADR-0011 policy (`--ignored` step runs on Linux/macOS only).

@@ -223,3 +223,53 @@ Rules:
 - WHAT: PHASE_3_REPORT.md (scorecard, issue log, cross-OS determinism table), ADR-0013/0014/0015, RISKS (R-013 narrowed with per-OS evidence, R-018/R-019 added), README status/roadmap/build docs, evidence ledger docs/evidence/phase3/ci-runs.txt with run URLs.
 - WHY: governance reconciliation at phase end (ADR-0007).
 - EVIDENCE: run #40 logs (physics smoke 29290/29290/29253 bytes on Windows/Linux/macOS; x86_64 pair bit-identical, ARM64 macOS low-bit variance); this commit.
+
+### [phase4] dependency pins + branch start (P4-0)
+- WHAT: branch `phase4-animation-ui-ai` from verified main (477b36c, run #43 green). egui 0.36.2 pinned in `[workspace.dependencies]`; gens-animation/gens-ui/gens-ai registered as workspace path deps; egui wired into the gens-ui shell. APIs verified against vendored source BEFORE coding: MSRV 1.95 ≤ 1.99; default features exactly `[default_fonts]` (embedded Ubuntu-Light/NotoEmoji/Hack via epaint_default_fonts — zero system-font dependency); 0.36 frame model `ctx.run_ui(RawInput, |ui|) -> FullOutput` (plain `run()` removed); `ctx.tessellate` → `Vec<ClippedPrimitive>` (Mesh | Callback); Mesh indices `Vec<u32>`, premultiplied-sRGB vertex colors; synthetic input via `RawInput{screen_rect,time,events}` + `Event::PointerButton/PointerMoved/PointerGone`. No egui-wgpu: it pairs with its own wgpu minor vs gens' 30.0.1 — rendering egui's tessellation through gens' own pipeline keeps ONE wgpu in the tree.
+- WHY: Phase 4 (animation + UI + AI) per README roadmap; the no-guessing discipline caught the frame-model and blending API drift before any code.
+- EVIDENCE: crates.io max-stable queries; vendored source reads; this commit; run #44. Environment incident disclosed: sandbox target/ exhausted the 9.9 GB disk (ENOSPC during egui compile) — purged, `CARGO_INCREMENTAL=0` adopted, zero code impact.
+
+### [phase4] gens-animation: skeleton + clips + forward kinematics (P4-1)
+- WHAT: skeleton.rs (flat cycle-free Skeleton — parents strictly earlier; JointPose TRS; LocalPose with blend + FK via global_matrix/global_matrices); clip.rs (VecTrack/QuatTrack — Linear/Step/shortest-arc slerp, sorted+validated keys, partition_point sampling; JointTrack 3 channels; Clip = duration-bounded BTreeMap joint→track with sample_clamped + sample_looped). 26 tests. One honest test fix: `from_rotation_z(-270°)` canonicalizes to the +90° quaternion (unit quat double cover) — endpoint replaced with a true −90° and the fact documented.
+- WHY: Phase 4 pillar 1 — the sampling layer blending, the controller, and the assets-phase skinning/glTF import build on; pure (state, time), no clocks (R-013).
+- EVIDENCE: 26 passed; clippy clean; run #45.
+
+### [phase4] gens-animation: blending + state-machine controller (P4-2)
+- WHAT: blend.rs (blend_into in-place lerp/slerp; crossfade timed clamped); controller.rs (AnimationController: Arc<Clip> states, declared parameter table (Number/Flag), data-only Condition/NumberOp transitions, crossfade bookkeeping with the outgoing clip still playing, insertion-order first-match scan, looping play_time wrap; slide_clip test helper). 44 crate tests. My own tests caught play_time advancing TWICE per update (duplicated line — probe example showed the oscillation); looping play_time now wraps at update so queries see sampler phase.
+- WHY: controllers are how gameplay drives animation; data conditions (not closures) keep the controller serializable and bit-for-bit replay-testable.
+- EVIDENCE: 44 passed; clippy clean; run #46.
+
+### [phase4] gens-ai: behavior trees with blackboard + memory composites (P4-3)
+- WHAT: bt.rs — NodeStatus, Blackboard (BTreeMap typed memory: Number/Flag/Text), Behavior trait (tick+reset), nodes: Sequence/Selector (memory cursors — finished children NOT re-ticked, pinned by a tick-counting test), Parallel (All/Any), Inverter, Repeat, Wait, Action/FnMut, Condition/Fn. 13 tests incl. a guard-patrol scenario and a bit-exact replay trace.
+- WHY: the decision layer the runtime example drives agents with; determinism from declaration-order iteration + ordered maps, no RNG, no clocks.
+- EVIDENCE: 13 passed; clippy clean; run #47. Authoring fixes disclosed: one test expected a third Running tick the correct memory semantics never produce (rewritten with a child tick-counter proving no re-tick); Rc<Cell> counters cloned before moving into leaf closures.
+
+### [phase4] gens-ai: grid nav + deterministic A* + steering (P4-4)
+- WHAT: nav.rs — Grid (walkable/cost cells on XZ, cell_center/world_to_cell), A* with Connectivity::Four/Eight, corner-cut prevention, FIXED neighbor order (N/E/S/W then NE/SE/SW/NW), integer-quantized priorities (cost·1024→u32; total order (f,h,index) — no float-comparator ambiguity), Manhattan/octile heuristics, PathError diagnostics; Steering seek/flee/arrive + stateless follow_path (documented overshoot limitation) + stateful forward-only PathFollower. 31 crate tests.
+- WHY: agents need paths; the runtime example steers along them. Quantized integer priorities make equal-priority pops a TOTAL order: same grid, same path, always.
+- EVIDENCE: 31 passed; clippy clean; run #48. Fixes disclosed: broken exploratory code in a reconstruct draft (caught by compile); the stateless follow_path turn-back behavior documented and given its own test, PathFollower added as the correct stateful primitive; clippy unwrap-after-is_some in neighbor expansion fixed.
+
+### [phase4] gens-ui: egui-backed headless core with replayable frames (P4-5)
+- WHAT: frame.rs (pure data: UiVertex pixel-space premultiplied, UiMesh + clip rect, TextureRef/Upload/Free, UiFrame, neutral UiEvent stream, UiInput with the engine clock); context.rs (UiContext: RawInput with ROOT viewport info + deterministic time, 1:1 event translation, one run_ui pass, tessellate, CPU texture mirror so partial font-atlas deltas still yield FULL uploads, textures_delta.clear() acknowledgement — epaint 0.36 Drop-asserts unapplied deltas). 7 tests: font atlas arrives as Managed(0) pass 1; label tessellates; synthetic press+release at a captured button rect CLICKS; pointer-away does not; partial deltas stay whole-texture; byte-identical frame replays; small wheel deltas observable same-pass. ppp pinned 1.0; uploads/frees sorted (egui delta maps are HashMaps).
+- WHY: runtime UI + text rendering pillar; immediate mode fits the replay-tested simulation style; no egui-wgpu (wgpu unification, ADR-0017).
+- EVIDENCE: run #49 FAILED (3 clippy lints on 3 OS — cargo test green; `clippy | tail -1` masked the failing status locally: lesson recorded), P4-5b run #50 SUCCESS. 0.36 API drift absorbed from source: CentralPanel::show now takes the pass &mut Ui; MouseWheel carries TouchPhase; ImageData is Color-only.
+
+### [phase4] gens-renderer + gens-ui: wgpu UI backend (P4-6)
+- WHAT: renderer ui.rs (UiVertex 32 B NDC+uv+premult color; ndc_from_pixel pure tested on 4 corners+center; UiBatch with scissor; UiPipeline — shaders/ui.wgsl, NO uniforms, premultiplied over-blend, no depth; validate_batch; Renderer::draw_ui_and_read — color-only pass, temp buffers documented); gens-ui backend.rs (UiRenderer: core + BTreeMap texture cache; uploads → GpuTexture (CPU mirror guarantees whole textures); pixel→NDC; clip→clamped scissor (pure tested); unknown textures SKIP+count). 2 #[ignore] GPU tests: opaque panel fill byte-exact (20,24,33) + glyphs/button paint over fill (rects captured from layout); hover changes button-center pixels.
+- WHY: the "text rendering" half of gens-ui's contract becomes real pixels through ONE wgpu tree, reusing the Phase 2 offscreen-first readback architecture end to end.
+- EVIDENCE: runs #51/#52 FAILED (CI GPU tests doing their job), #53 SUCCESS. Issue chain: (1) panel fill stored [79,87,101] = encode(20/255) — raw byte/255 vertex colors treated as linear, double-brightened by the sRGB target; fixed by decoding premultiplied-sRGB vertex colors at the render boundary (the Phase 2 P2-8 convention), round-trip unit-tested WITHOUT a GPU; (2) my text scan probed a hardcoded row above the glyphs — renderer correct, test fixed by capturing widget rects (the P2-8c lesson again).
+
+### [phase4] runtime: animate_hello integration proof (P4-7)
+- WHAT: 12×10 grid with central obstacle; BT Selector[dwell, steer] over Rc<RefCell<AgentRuntime>> leaves; PathFollower at 2 u/s; moving flag drives AnimationController (walk 1 s loop + sway, idle 2 s breathing, 0.2 s crossfades) on a 2-joint skeleton; FK + agent pos → ECS Transform → EngineSchedules.run_frame → WorldTransform (Phase 1 pipeline); headless egui HUD per step, tessellated frame FNV-hashed into evidence. Samples every 20 steps. Two 900-step runs BIT-IDENTICAL; gates: x-span > 8, both states observed, walked > 16. Measured: 1.5→10.5 span, 24.57 walked, 45 samples, 4100 B evidence.
+- WHY: the Phase 4 integration proof — three new pillars compose with the Phase 1 loop/ECS exactly as physics_hello composed input+physics in Phase 3.
+- EVIDENCE: run #54; first execution green after three compile-caught shape fixes (RefMut guard overlap → steer takes owned snapshots; BT leaves own clones of shared state; Box::new on every composite).
+
+### [phase4] CI smoke on 3 OS + verify.sh 9 gates (P4-8)
+- WHAT: ci.yml 'Headless animation+AI+UI smoke' runs animate_hello on EVERY OS; smoke_animate.json joins artifacts; verify.sh gains gate [7/9] and renumbers to 9 gates.
+- WHY: every push exercises the new pillars on all platforms (ADR-0004); the replay makes each 3-OS run a cross-platform consistency witness.
+- EVIDENCE: local verify.sh PASS (9 gates); run #55: animate smoke 4100/4100/4100 B on Windows/Linux/macOS — byte-identical cross-OS evidence recorded under R-013/R-021 without claiming a guarantee.
+
+### [phase4] phase docs + evidence (P4-9)
+- WHAT: PHASE_4_REPORT.md (scorecard, issue log, cross-OS table), ADR-0016/0017/0018, RISKS (R-013 Phase 4 note, R-017 per-call granularity note, R-020 egui churn, R-021 UI raster bit-identity), README status/roadmap/build docs, evidence ledger docs/evidence/phase4/ with run URLs.
+- WHY: governance reconciliation at phase end (ADR-0007).
+- EVIDENCE: runs #44–#55 ledger; workspace 199 passed / 0 failed / 8 ignored (GPU).
