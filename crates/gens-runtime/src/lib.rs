@@ -15,7 +15,13 @@
 //! Phase 8 contents: [`profile`] — observation-only instrumentation and
 //! the canonical [`profile::world_state_hash`] the ADR-0027 proof uses
 //! (profiler on vs off must replay byte-identically).
+//!
+//! Phase 9 contents: [`cinematic`] — the bridge between the pure
+//! [`gens_cinematics`] timelines and the live world (binding map, camera
+//! staging, the sample-validate-advance-write apply loop), plus the
+//! `cinematic_hello` replay proof example.
 
+pub mod cinematic;
 pub mod data;
 pub mod debug;
 pub mod net;

@@ -941,6 +941,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gens-cinematics"
+version = "0.1.0"
+dependencies = [
+ "gens-math",
+ "thiserror",
+]
+
+[[package]]
 name = "gens-core"
 version = "0.1.0"
 dependencies = [
@@ -965,6 +973,7 @@ dependencies = [
  "bevy_ecs",
  "egui",
  "gens-assets",
+ "gens-cinematics",
  "gens-core",
  "gens-ecs",
  "gens-math",
@@ -1024,6 +1033,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "gens-plugin"
+version = "0.1.0"
+dependencies = [
+ "gens-ecs",
+ "gens-math",
+ "thiserror",
+]
+
+[[package]]
 name = "gens-profiler"
 version = "0.1.0"
 dependencies = [
@@ -1045,10 +1063,12 @@ dependencies = [
 name = "gens-runtime"
 version = "0.1.0"
 dependencies = [
+ "bevy_ecs",
  "egui",
  "gens-ai",
  "gens-animation",
  "gens-assets",
+ "gens-cinematics",
  "gens-core",
  "gens-ecs",
  "gens-input",
@@ -1059,6 +1079,7 @@ dependencies = [
  "gens-renderer",
  "gens-scripting",
  "gens-ui",
+ "gens-worldgen",
  "image",
  "serde",
  "serde_json",
@@ -1085,6 +1106,14 @@ dependencies = [
  "egui",
  "gens-core",
  "gens-renderer",
+]
+
+[[package]]
+name = "gens-worldgen"
+version = "0.1.0"
+dependencies = [
+ "gens-math",
+ "thiserror",
 ]
 
 [[package]]

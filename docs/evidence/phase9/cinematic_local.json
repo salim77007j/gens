@@ -1,0 +1,103 @@
+{
+  "format": "gens-cinematic-1",
+  "environment": {
+    "os": "linux",
+    "arch": "x86_64",
+    "profile": "debug",
+    "package_version": "0.1.0"
+  },
+  "fixed_dt": 0.01666666753590107,
+  "steps": 300,
+  "seek_at": 60,
+  "timeline": {
+    "duration": 4.0,
+    "track_count": 6,
+    "event_names": [
+      "title-card",
+      "act-two",
+      "credits"
+    ],
+    "camera_target": "camera"
+  },
+  "run_a": {
+    "hashes_every_60": [
+      "5ebeac3660b4ef1e",
+      "ff5ca06720d23e68",
+      "039a62c9eeb1213b",
+      "178fd5299660a59e",
+      "65aeb0df029f4582"
+    ],
+    "events": [
+      [
+        30,
+        "title-card"
+      ],
+      [
+        121,
+        "act-two"
+      ],
+      [
+        211,
+        "credits"
+      ]
+    ],
+    "final_hash": "65aeb0df029f4582",
+    "final_fov_bits": "42340000",
+    "final_fade": 0.0,
+    "final_local_time": 4.0
+  },
+  "run_b": {
+    "hashes_every_60": [
+      "5ebeac3660b4ef1e",
+      "ff5ca06720d23e68",
+      "039a62c9eeb1213b",
+      "178fd5299660a59e",
+      "65aeb0df029f4582"
+    ],
+    "events": [
+      [
+        30,
+        "title-card"
+      ],
+      [
+        121,
+        "act-two"
+      ],
+      [
+        211,
+        "credits"
+      ]
+    ],
+    "final_hash": "65aeb0df029f4582",
+    "final_fov_bits": "42340000",
+    "final_fade": 0.0,
+    "final_local_time": 4.0
+  },
+  "run_c": {
+    "seek_target": 0.9999997,
+    "seek_target_bits": "3f7ffffb",
+    "hashes_every_60_from_seek": [
+      "ff5ca06720d23e68",
+      "039a62c9eeb1213b",
+      "178fd5299660a59e",
+      "65aeb0df029f4582"
+    ],
+    "events": [
+      [
+        61,
+        "act-two"
+      ],
+      [
+        151,
+        "credits"
+      ]
+    ],
+    "final_hash": "65aeb0df029f4582",
+    "hashes_match_run_a": true
+  },
+  "proof": {
+    "replay_identical": true,
+    "seek_equivalent": true
+  },
+  "advisory": "determinism proof, not performance; times are fixed-step simulation time"
+}

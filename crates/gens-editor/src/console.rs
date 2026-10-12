@@ -189,18 +189,7 @@ pub(crate) fn panel(ui: &mut egui::Ui, state: &mut EditorState, assets: &AssetRe
         crate::shell::BottomTab::Console => console_tab(ui, state),
         crate::shell::BottomTab::Profiler => profiler_tab(ui, state),
         crate::shell::BottomTab::Performance => performance_tab(ui, state),
-        crate::shell::BottomTab::Network => {
-            ui.centered_and_justified(|ui| {
-                ui.label(
-                    egui::RichText::new(
-                        "Network panel stays an honest empty state: the window \
-                         shell is future work, and the session layer's counters \
-                         live in gens-networking today.",
-                    )
-                    .color(theme::TEXT_DIM),
-                );
-            });
-        }
+        crate::shell::BottomTab::Network => crate::cinema::network_panel(ui, state),
     }
     let _ = assets; // reserved: console commands that touch assets
 }

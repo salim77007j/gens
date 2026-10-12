@@ -154,6 +154,12 @@ pub struct EditorState {
     /// the same intent-queue pattern as [`EditorCommand`] (the shell
     /// never executes world-level work itself).
     pub pending_commands: Vec<String>,
+    /// Live cinematic snapshot the Animator + Game View tabs read
+    /// (None = no cinematic; the tabs render honest empty states).
+    pub cinematic: Option<crate::cinema::CinematicPanelData>,
+    /// Network session snapshot the Network tab reads (None = no live
+    /// session — see [`crate::cinema`] for why it is a snapshot).
+    pub net: Option<crate::cinema::NetPanelData>,
 }
 
 impl EditorState {
@@ -256,7 +262,16 @@ impl EditorShell {
         state.stats.entities = world.iter_entities().count();
         // The 3D viewport renders FIRST (own target); its pixels become
         // an egui texture; then the whole editor UI paints over them.
-        viewport.render(ui.core_mut().ctx(), state, world)?;
+        // Game View renders the SAME scene through the cinematic camera
+        // when a directed camera pose exists (ADR-0030's staging rule);
+        // otherwise it shows the orbit view like the 3D tab.
+        let game_view_pose = (state.view_tab == Some(ViewTab::GameView))
+            .then(|| state.cinematic.as_ref().and_then(|c| c.camera_pose))
+            .flatten();
+        match game_view_pose {
+            Some(pose) => viewport.render_game_view(ui.core_mut().ctx(), state, world, &pose)?,
+            None => viewport.render(ui.core_mut().ctx(), state, world)?,
+        }
         // UiRenderer::render takes `impl Fn` (one paint call per pass, no
         // re-entrant borrows) — the same constraint the Phase 4 HUD met.
         // State and world travel through RefCells so panels can mutate
@@ -423,7 +438,11 @@ fn center_dock(
     world: &mut World,
 ) {
     egui::CentralPanel::default()
-        .frame(egui::Frame::default().fill(theme::PANEL_BG).inner_margin(egui::Margin::same(4)))
+        .frame(
+            egui::Frame::default()
+                .fill(theme::PANEL_BG)
+                .inner_margin(egui::Margin::same(4)),
+        )
         .show(ui, |ui| {
             // Tab row (the reference's "3D Viewport | Game View | Animator").
             ui.horizontal(|ui| {
@@ -439,14 +458,8 @@ fn center_dock(
                 Some(ViewTab::Viewport3d) => {
                     viewport.panel(ui, state, world);
                 }
-                Some(ViewTab::GameView) => empty_state(
-                    ui,
-                    "Game View renders the player camera — Phase 8 scope (profiling + build pipeline ships it alongside the window shell).",
-                ),
-                Some(ViewTab::Animator) => empty_state(
-                    ui,
-                    "The animator graph editor is Phase 9 scope; the animation runtime (clips, blend trees, FK) is already live via gens-animation.",
-                ),
+                Some(ViewTab::GameView) => viewport.game_view_panel(ui, state),
+                Some(ViewTab::Animator) => crate::cinema::animator_panel(ui, state),
                 None => empty_state(ui, "No view tab active — pick one above."),
             }
         });
