@@ -10,3 +10,18 @@ authors.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+gens-ecs.workspace = true
+gens-math.workspace = true
+thiserror.workspace = true
+rhai.workspace = true
+serde.workspace = true
+# Direct dep for the Component/Resource derives (the gens-physics
+# precedent: bevy 0.16+ requires resources to be components, which
+# cannot be retro-implanted through the facade; ADR-0002's convention
+# stays — gens types, bevy plumbing).
+bevy_ecs.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

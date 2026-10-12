@@ -1,0 +1,27 @@
+# Phase 5 CI run ledger — branch phase5-scripting-assets-save
+# Every push runs the full gate matrix on 3 OS (ubuntu/macos/windows):
+# fmt, clippy -D warnings, build, tests, 4 CPU smokes, GPU smoke
+# (Linux/macOS real adapters), docs gate, secret scan, size gate.
+
+#58  P5-0  (superseded) — cancelled by the #59 push (same-branch
+#           supersession; double-push, see PHASE_5_REPORT issue #1)
+#59  P5-0  (superseded) — cancelled by the #60 push
+#60  P5-0  dependency pins (serde/serde_json/rhai/gltf) + CI helper   SUCCESS
+      https://github.com/salim77007j/gens/actions/runs/38190391054
+#61  P5-1  assets registry core (ids, FNV hashing, versioning)        SUCCESS
+      https://github.com/salim77007j/gens/actions/runs/38191604129
+#62  P5-2  glTF 2.0 import (meshes, skins+IBMs, clips)                SUCCESS
+      https://github.com/salim77007j/gens/actions/runs/38192853617
+#63  P5-3  sandboxed Rhai engine + ScriptVars                         SUCCESS
+      https://github.com/salim77007j/gens/actions/runs/38193659794
+#64  P5-4  ScriptHost + entity API + deterministic runner             SUCCESS
+      https://github.com/salim77007j/gens/actions/runs/38194355577
+#65  P5-5  versioned hash-verified world save/load                    SUCCESS
+      https://github.com/salim77007j/gens/actions/runs/38195129367
+#66  P5-6/P5-7  asset_script_hello + 3-OS smoke + verify gate 10      SUCCESS
+      https://github.com/salim77007j/gens/actions/runs/38196336463
+      evidence: smoke_asset_script.json = 30064 B on Windows, Linux
+      AND macOS — byte-identical cross-OS (recorded under R-013 as
+      evidence, not claimed as a guarantee)
+
+# Merge run: recorded here after the merge (see the anchor commit).

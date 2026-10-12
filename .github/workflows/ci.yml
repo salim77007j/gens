@@ -147,6 +147,17 @@ jobs:
           test -f smoke_animate.json
           echo "animate smoke trajectory: $(wc -c < smoke_animate.json) bytes"
 
+      - name: Headless assets+scripting+save smoke (glTF import -> Rhai script -> save/load replay)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # CPU-only by design: glTF import, sandboxed Rhai decisions and
+          # save/load are pure; the save/load continuation must replay
+          # bit-identically against the straight-through run (R-013).
+          cargo run -p gens-runtime --example asset_script_hello -- --steps 1200 --out smoke_asset_script.json
+          test -f smoke_asset_script.json
+          echo "asset+script smoke evidence: $(wc -c < smoke_asset_script.json) bytes"
+
       - name: Headless GPU smoke (wgpu offscreen render + PNG)
         if: steps.detect.outputs.active == 'true'
         shell: bash
@@ -176,6 +187,7 @@ jobs:
             smoke_gpu.png
             smoke_physics.json
             smoke_animate.json
+            smoke_asset_script.json
 
       - name: Binary size gate
         if: steps.detect.outputs.active == 'true'
