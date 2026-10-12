@@ -36,3 +36,7 @@
 #![warn(missing_docs)]
 
 pub mod track;
+
+pub mod timeline;
+
+pub mod player;

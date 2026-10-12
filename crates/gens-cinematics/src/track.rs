@@ -148,6 +148,12 @@ impl FloatTrack {
         self.interpolation
     }
 
+    /// All keys in sampling order (sorted by time).
+    #[must_use]
+    pub fn keys(&self) -> &[FloatKey] {
+        &self.keys
+    }
+
     /// Sampled value at `time` with clamp-at-ends semantics.
     #[must_use]
     pub fn sample(&self, time: f32) -> f32 {
@@ -207,6 +213,12 @@ impl Vec3Track {
         self.interpolation
     }
 
+    /// All keys in sampling order (sorted by time).
+    #[must_use]
+    pub fn keys(&self) -> &[Vec3Key] {
+        &self.keys
+    }
+
     /// Sampled value at `time` with clamp-at-ends semantics.
     #[must_use]
     pub fn sample(&self, time: f32) -> Vec3 {
@@ -263,6 +275,12 @@ impl QuatTrack {
     #[must_use]
     pub fn interpolation(&self) -> Interpolation {
         self.interpolation
+    }
+
+    /// All keys in sampling order (sorted by time).
+    #[must_use]
+    pub fn keys(&self) -> &[QuatKey] {
+        &self.keys
     }
 
     /// Sampled rotation at `time` with clamp-at-ends semantics.
