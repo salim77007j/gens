@@ -19,3 +19,7 @@ gens-math.workspace = true
 gens-renderer.workspace = true
 gens-physics.workspace = true
 gens-input.workspace = true
+gens-animation.workspace = true
+gens-ui.workspace = true
+gens-ai.workspace = true
+egui.workspace = true

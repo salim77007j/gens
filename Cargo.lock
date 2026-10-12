@@ -828,12 +828,16 @@ dependencies = [
 name = "gens-runtime"
 version = "0.1.0"
 dependencies = [
+ "egui",
+ "gens-ai",
+ "gens-animation",
  "gens-core",
  "gens-ecs",
  "gens-input",
  "gens-math",
  "gens-physics",
  "gens-renderer",
+ "gens-ui",
  "image",
 ]
 
