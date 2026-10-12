@@ -384,15 +384,13 @@ fn bottom_dock(ui: &mut egui::Ui, state: &mut EditorState, assets: &AssetRegistr
                 .inner_margin(egui::Margin::same(4)),
         )
         .show(ui, |ui| {
-            let half = ui.available_width() * 0.5;
-            let height = ui.available_height();
-            ui.horizontal(|ui| {
-                ui.allocate_ui(egui::vec2(half, height), |ui| {
-                    crate::assets::panel(ui, state, assets);
-                });
-                ui.allocate_ui(egui::vec2(ui.available_width(), height), |ui| {
-                    crate::console::panel(ui, state, assets);
-                });
+            // Two equal columns: asset browser left, console right.
+            // (The previous manual allocate_ui split mis-placed both
+            // panels — content landed in the wrong half and ~110 px too
+            // low, pinned by the headless geometry test below.)
+            ui.columns(2, |columns| {
+                crate::assets::panel(&mut columns[0], state, assets);
+                crate::console::panel(&mut columns[1], state, assets);
             });
         });
 }
@@ -439,4 +437,51 @@ fn empty_state(ui: &mut egui::Ui, text: &str) {
     ui.centered_and_justified(|ui| {
         ui.label(egui::RichText::new(text).color(theme::TEXT_DIM));
     });
+}
+
+#[cfg(test)]
+mod shell_tests {
+    use super::*;
+    use gens_ui::UiContext;
+
+    /// The bottom dock's two columns must place the console text in the
+    /// RIGHT half near the dock top, inside the dock bounds. The first
+    /// CI snapshot (run #90) exposed the manual allocate_ui split
+    /// mis-placing content — this test pins the fix.
+    #[test]
+    fn bottom_dock_columns_place_console_content_correctly() {
+        let state = EditorState::new();
+        state.console.push(crate::console::ConsoleLine {
+            time_seconds: 0.0,
+            level: tracing::Level::INFO,
+            target: "t".into(),
+            message: "engine initialized".into(),
+        });
+        let assets = AssetRegistry::new();
+        let state_cell = std::cell::RefCell::new(state);
+        let mut ctx = UiContext::new();
+        let frame = ctx.run(gens_ui::UiInput::new([1600, 230], 0.0, 1.0 / 60.0), |ui| {
+            bottom_dock(ui, &mut state_cell.borrow_mut(), &assets)
+        });
+        let mut console_text_right_top = false;
+        let mut right_half_max_y: f32 = 0.0;
+        for mesh in &frame.meshes {
+            for v in &mesh.vertices {
+                if v.pos[0] > 810.0 {
+                    right_half_max_y = right_half_max_y.max(v.pos[1]);
+                    if v.pos[1] < 120.0 {
+                        console_text_right_top = true;
+                    }
+                }
+            }
+        }
+        assert!(
+            console_text_right_top,
+            "console content must tessellate in the right column near the dock top"
+        );
+        assert!(
+            right_half_max_y <= 232.0,
+            "right-column content must stay inside the dock (max y {right_half_max_y})"
+        );
+    }
 }

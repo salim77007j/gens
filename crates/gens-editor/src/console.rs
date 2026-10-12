@@ -351,3 +351,78 @@ mod tests {
         assert_eq!(severity_color(&tracing::Level::DEBUG), theme::SEVERITY[3]);
     }
 }
+
+#[cfg(test)]
+mod paint_tests {
+    use super::*;
+    use crate::shell::EditorState;
+    use gens_assets::AssetRegistry;
+    use gens_ui::UiContext;
+    use tracing_subscriber::layer::SubscriberExt;
+
+    /// The console panel must tessellate the captured lines (headless,
+    /// no GPU — the same pass gens-ui's tests use).
+    #[test]
+    fn console_panel_tessellates_captured_lines() {
+        let state = EditorState::new();
+        let sink = ConsoleSink::new(state.console.clone());
+        let subscriber = tracing_subscriber::registry().with(sink);
+        tracing::subscriber::with_default(subscriber, || {
+            tracing::info!("engine initialized");
+            tracing::info!("physics initialized: rapier3d");
+        });
+        assert_eq!(state.console.len(), 2, "capture must land in the buffer");
+        let mut ctx = UiContext::new();
+        let state_cell = std::cell::RefCell::new(state);
+        let frame = ctx.run(gens_ui::UiInput::new([700, 200], 0.0, 1.0 / 60.0), |ui| {
+            panel(ui, &mut state_cell.borrow_mut(), &AssetRegistry::new())
+        });
+        let state = state_cell.into_inner();
+        let _ = &state;
+        assert!(
+            !frame.meshes.is_empty(),
+            "console panel must tessellate text into meshes"
+        );
+    }
+}
+
+#[cfg(test)]
+mod flow_tests {
+    use super::*;
+    use crate::shell::EditorState;
+    use gens_assets::AssetRegistry;
+    use gens_ui::UiContext;
+    use tracing_subscriber::layer::SubscriberExt;
+
+    /// Replicates the example's exact flow: sink cloned from state,
+    /// events logged under with_default, then the shell's mem::take
+    /// dance, then a paint pass. The console must survive all of it.
+    #[test]
+    fn console_survives_frame_take_dance() {
+        let mut state = EditorState::new();
+        let sink = ConsoleSink::new(state.console.clone());
+        let subscriber = tracing_subscriber::registry()
+            .with(sink)
+            .with(tracing_subscriber::fmt::layer().without_time().compact());
+        tracing::subscriber::with_default(subscriber, || {
+            tracing::info!("engine initialized");
+            tracing::info!("physics initialized: rapier3d");
+            // The shell frame dance (mirrors EditorShell::frame).
+            let state_cell = std::cell::RefCell::new(std::mem::take(&mut state));
+            {
+                let s = state_cell.borrow();
+                assert_eq!(s.console.len(), 2, "taken state keeps the buffer");
+            }
+            let mut ctx = UiContext::new();
+            let frame = ctx.run(gens_ui::UiInput::new([700, 200], 0.5, 1.0 / 60.0), |ui| {
+                panel(ui, &mut state_cell.borrow_mut(), &AssetRegistry::new())
+            });
+            assert!(
+                !frame.meshes.is_empty(),
+                "console must tessellate after the take dance"
+            );
+            state = state_cell.into_inner();
+        });
+        assert_eq!(state.console.len(), 2);
+    }
+}

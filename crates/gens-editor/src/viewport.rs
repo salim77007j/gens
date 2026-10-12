@@ -233,6 +233,10 @@ impl EditorViewport {
 
         let device = self.renderer.context().device().clone();
         let queue = self.renderer.context().queue().clone();
+        // Stage the camera FIRST — without this the shaders keep whatever
+        // matrix was uploaded last and everything clips away (caught by
+        // inspecting the first CI snapshot: empty viewport, gizmo fine).
+        self.renderer.set_camera(&queue, view_proj);
         let draws_info = collect_draws(world);
 
         // Pass 1: stage model matrices + fill the mesh cache (mutable
