@@ -19,13 +19,19 @@
 //! too). Docks can be toggled from the View menu — that is real state,
 //! persisted nowhere (the editor is session-scoped, like the reference).
 
-use crate::{model::EditorCommand, theme, viewport::EditorViewport};
+use crate::{
+    console::{ConsoleBuffer, ConsoleSink},
+    model::EditorCommand,
+    theme,
+    viewport::EditorViewport,
+};
 use gens_assets::AssetRegistry;
 use gens_ecs::prelude::*;
 use gens_renderer::{GpuContext, Renderer};
 use gens_ui::{UiInput, UiRenderer};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 /// Which center-dock tab is active (reference: 3D Viewport / Game View /
 /// Animator).
@@ -138,6 +144,8 @@ pub struct EditorState {
     pub asset_folder: Option<String>,
     /// Asset browser: the selected asset key.
     pub selected_asset: Option<String>,
+    /// Console ring buffer (tracing events land here).
+    pub console: Arc<ConsoleBuffer>,
 }
 
 impl EditorState {
@@ -151,6 +159,7 @@ impl EditorState {
             show_bottom_dock: true,
             orbit: crate::viewport::OrbitCam::default(),
             viewport_size_px: crate::viewport::DEFAULT_SIZE,
+            console: Arc::new(ConsoleBuffer::new()),
             ..Default::default()
         }
     }
@@ -191,6 +200,12 @@ impl EditorShell {
         })
     }
 
+    /// The console tracing sink — install it as a subscriber layer
+    /// BEFORE the first engine event so the console captures everything.
+    pub fn console_sink(&self) -> ConsoleSink {
+        ConsoleSink::new(self.state.console.clone())
+    }
+
     /// Resizes the window target (viewport resize is independent).
     ///
     /// # Errors
@@ -217,6 +232,14 @@ impl EditorShell {
             state,
             viewport,
         } = self;
+        // Deterministic clock into the console + status-bar counters.
+        state.console.set_time(input.time_seconds);
+        state.stats.fps = if input.dt_seconds > 0.0 {
+            1.0 / input.dt_seconds
+        } else {
+            0.0
+        };
+        state.stats.entities = world.iter_entities().count();
         // The 3D viewport renders FIRST (own target); its pixels become
         // an egui texture; then the whole editor UI paints over them.
         viewport.render(ui.core_mut().ctx(), state, world)?;
@@ -369,7 +392,7 @@ fn bottom_dock(ui: &mut egui::Ui, state: &mut EditorState, assets: &AssetRegistr
                     crate::assets::panel(ui, state, assets);
                 });
                 ui.allocate_ui(egui::vec2(ui.available_width(), height), |ui| {
-                    crate::console::panel(ui, state);
+                    crate::console::panel(ui, state, assets);
                 });
             });
         });
