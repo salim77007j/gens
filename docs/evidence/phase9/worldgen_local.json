@@ -1,0 +1,133 @@
+{
+  "format": "gens-worldgen-1",
+  "environment": {
+    "os": "linux",
+    "arch": "x86_64",
+    "profile": "debug",
+    "package_version": "0.1.0"
+  },
+  "steps": 300,
+  "fixed_dt": 0.01666666753590107,
+  "generator": {
+    "seed": 11400714819323198485,
+    "samples_per_chunk": 16,
+    "cell_size": 1.0,
+    "frequency": 0.06,
+    "octaves": 4,
+    "chunk_size": 16.0,
+    "density_threshold": 0.55
+  },
+  "order_independence": {
+    "row_major": [
+      "f5b670251b56db73",
+      "e868d7307491cb0c",
+      "cf2e0fef11485ef0",
+      "0c7047ac84762edb"
+    ],
+    "reverse": [
+      "f5b670251b56db73",
+      "e868d7307491cb0c",
+      "cf2e0fef11485ef0",
+      "0c7047ac84762edb"
+    ],
+    "permutation": [
+      "f5b670251b56db73",
+      "e868d7307491cb0c",
+      "cf2e0fef11485ef0",
+      "0c7047ac84762edb"
+    ],
+    "identical": true
+  },
+  "streaming_ledger_a": [
+    [
+      1,
+      "load (-1,-1)"
+    ],
+    [
+      1,
+      "load (-1,0)"
+    ],
+    [
+      1,
+      "load (-1,1)"
+    ],
+    [
+      1,
+      "load (0,-1)"
+    ],
+    [
+      1,
+      "load (0,0)"
+    ],
+    [
+      1,
+      "load (0,1)"
+    ],
+    [
+      1,
+      "load (1,-1)"
+    ],
+    [
+      1,
+      "load (1,0)"
+    ],
+    [
+      1,
+      "load (1,1)"
+    ],
+    [
+      160,
+      "load (2,-1)"
+    ],
+    [
+      160,
+      "load (2,0)"
+    ],
+    [
+      160,
+      "load (2,1)"
+    ],
+    [
+      160,
+      "unload (-1,-1)"
+    ],
+    [
+      160,
+      "unload (-1,0)"
+    ],
+    [
+      160,
+      "unload (-1,1)"
+    ]
+  ],
+  "run_a": {
+    "final_hash": "2744eab1fe1f5a53",
+    "hashes_every_60": [
+      "de7233c7b41190b8",
+      "de7233c7b41190b8",
+      "2744eab1fe1f5a53",
+      "2744eab1fe1f5a53",
+      "2744eab1fe1f5a53"
+    ],
+    "load_events": 12,
+    "unload_events": 3
+  },
+  "run_b": {
+    "final_hash": "2744eab1fe1f5a53",
+    "hashes_every_60": [
+      "de7233c7b41190b8",
+      "de7233c7b41190b8",
+      "2744eab1fe1f5a53",
+      "2744eab1fe1f5a53",
+      "2744eab1fe1f5a53"
+    ],
+    "load_events": 12,
+    "unload_events": 3
+  },
+  "proof": {
+    "streaming_identical": true,
+    "restart_identical": true,
+    "terrain_persistent": true
+  },
+  "advisory": "determinism proof, not performance; terrain is procedural, not art-directed"
+}

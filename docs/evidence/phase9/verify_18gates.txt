@@ -1,0 +1,23 @@
+Local verify.sh transcript — Phase 9 (18 gates), 2026-10-12T22:44:31Z
+CARGO_INCREMENTAL=0, clean tree, sandbox Linux x86_64
+
+==> [0/17] governance docs present
+==> [1/17] secret scan
+==> [2/17] cargo fmt
+==> [3/17] cargo clippy
+==> [4/17] cargo build
+==> [5/17] cargo test  (468 passed / 0 failed / 9 ignored GPU)
+==> [6/17] physics smoke: 29290 bytes
+==> [7/17] animate smoke: 4100 bytes
+==> [8/17] asset+script smoke: 30064 bytes
+==> [9/17] net smoke: 1571 bytes
+==> [10/17] GPU smoke: GPU-SKIP (no adapter; CI renders on Linux/macOS)
+==> [11/17] editor example: built
+==> [12/17] profiler smoke: 1451 bytes
+==> [13/17] cinematic smoke: 1918 bytes of replay-proof evidence
+==> [14/17] worldgen smoke: 2252 bytes of generation evidence
+==> [15/17] plugin smoke: 686 bytes of API evidence
+==> [16/17] package smoke: 1211 bytes
+==> [17/17] binary size gates: debug OK; RELEASE-GATE-SKIP (<3GB free, CI enforces)
+
+VERIFY: PASS

@@ -1,0 +1,10 @@
+Phase 9 CI run ledger — branch phase9-cinematics-world-plugins
+#111 cancelled 1a93ffd P9-0 (superseded by the P9-1 push; content covered by #112)
+#112 success  b340a7b P9-1 keyframe tracks
+#113 success  083c896 P9-2a timeline + player
+#114 success  7cc9923 P9-2b runtime integration + replay proof
+#115 success  67c69f6 P9-3 noise + heightfield + scatter
+#116 success  51016dc P9-4 chunks + streaming + worldgen proof
+#117 success  5dff6e3 P9-5 plugin registry + out-of-tree proof
+#118 success  5ecd60c P9-6 editor tabs
+#119 success  78a9387 P9-7 3 new smokes + 18 verify gates

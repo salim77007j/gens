@@ -1,5 +1,5 @@
-> **Status: Phase 8 — Profiling + Debugging + Build Pipeline.**
-> Phases 0-8 complete and CI-verified on Windows / Linux / macOS: workspace + core runtime + ECS + math; offscreen-first wgpu renderer with GPU screenshots; rapier3d physics; kira headless audio; pure action-mapped input; skeletal animation + egui UI + deterministic AI; sandboxed Rhai scripting + glTF import + hash-verified saves; versioned JSON scene documents plus QUIC loopback networking; a docked-panel visual editor; and now observation-only profiling (nested spans, aggregation reports, allocator-level memory tracking — the profiler-on/off replay is proven byte-identical), debugging tools (canonical world dumps, a typed invariant validator, console commands that execute against the live world), and a build pipeline (GENSPKG1 hash-verified game packages, `gens-pkg`/`gens-player` CLIs, a headless player with run reports, plus environment-disclosed step benchmarks and debug+release binary size gates). See [`docs/PHASE_8_REPORT.md`](docs/PHASE_8_REPORT.md) and the live status in [`docs/WORKLOG.md`](docs/WORKLOG.md).
+> **Status: Phase 9 — Cinematics + World Building + Plugins.**
+> Phases 0-9 complete and CI-verified on Windows / Linux / macOS: workspace + core runtime + ECS + math; offscreen-first wgpu renderer with GPU screenshots; rapier3d physics; kira headless audio; pure action-mapped input; skeletal animation + egui UI + deterministic AI; sandboxed Rhai scripting + glTF import + hash-verified saves; versioned JSON scene documents plus QUIC loopback networking; a docked-panel visual editor; observation-only profiling, world dumps + invariant validation + console commands, and a GENSPKG1 build pipeline; and now deterministic cinematic timelines (pure sampled tracks, exactly-once events, director camera staging — replay- and seek-equivalence proven), procedural world building (seeded integer-lattice noise, content-hashed terrain meshes, chunk content as a pure function of (seed, coord), differential streaming — order/streaming/restart proven through the ECS), and a plugin API proven from OUTSIDE the workspace by a real downstream crate (the editor's Game View renders through the director camera, the Animator tab shows live track tables, and the Network tab takes honest session snapshots). See [`docs/PHASE_9_REPORT.md`](docs/PHASE_9_REPORT.md) and the live status in [`docs/WORKLOG.md`](docs/WORKLOG.md).
 
 
 ## Design Goals
@@ -45,7 +45,7 @@ The workspace, dependency graph, and profiles are defined in Phase 1 (see `docs/
 | 6 | Networking + data assets | **Complete** | [`docs/PHASE_6_REPORT.md`](docs/PHASE_6_REPORT.md) |
 | 7 | Visual editor | **Complete** | [`docs/PHASE_7_REPORT.md`](docs/PHASE_7_REPORT.md) |
 | 8 | Profiling + debugging + build pipeline | **Complete** | [`docs/PHASE_8_REPORT.md`](docs/PHASE_8_REPORT.md) |
-| 9 | Cinematics + world building + plugins | Pending | — |
+| 9 | Cinematics + world building + plugins | **Complete** | [`docs/PHASE_9_REPORT.md`](docs/PHASE_9_REPORT.md) |
 | 10 | Final testing + benchmarks + validation | Pending | — |
 
 Each phase runs on its own branch (`phase<N>-<slug>`), is verified by CI, and lands on `main` only when its success criteria are met. `pre-phase<N>-safe` tags mark rollback anchors before each phase begins.
