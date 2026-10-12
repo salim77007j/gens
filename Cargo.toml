@@ -18,6 +18,9 @@ members = [
     "crates/gens-runtime",
     "crates/gens-profiler",
     "crates/gens-build",
+    "crates/gens-cinematics",
+    "crates/gens-worldgen",
+    "crates/gens-plugin",
 ]
 
 [workspace.package]

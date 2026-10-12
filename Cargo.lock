@@ -941,6 +941,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gens-cinematics"
+version = "0.1.0"
+dependencies = [
+ "gens-math",
+ "thiserror",
+]
+
+[[package]]
 name = "gens-core"
 version = "0.1.0"
 dependencies = [
@@ -1024,6 +1032,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gens-plugin"
+version = "0.1.0"
+dependencies = [
+ "gens-ecs",
+ "thiserror",
+]
+
+[[package]]
 name = "gens-profiler"
 version = "0.1.0"
 dependencies = [
@@ -1085,6 +1101,14 @@ dependencies = [
  "egui",
  "gens-core",
  "gens-renderer",
+]
+
+[[package]]
+name = "gens-worldgen"
+version = "0.1.0"
+dependencies = [
+ "gens-math",
+ "thiserror",
 ]
 
 [[package]]

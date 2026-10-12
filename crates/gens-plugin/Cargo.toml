@@ -1,0 +1,16 @@
+[package]
+name = "gens-plugin"
+description = "The Gens plugin API: deterministic in-process registration of systems and startup logic (Phase 9)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+gens-ecs.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true
