@@ -1,5 +1,5 @@
-> **Status: Phase 6 — Networking + Data Assets.**
-> Phases 0-6 complete and CI-verified on Windows / Linux / macOS: workspace + core runtime + ECS + math; offscreen-first wgpu renderer with GPU screenshots; rapier3d physics; kira headless audio; pure action-mapped input; skeletal animation + egui UI + deterministic AI; sandboxed Rhai scripting + glTF import + hash-verified saves; and now versioned JSON scene documents (data assets) plus QUIC loopback networking whose world-state replication replays bit-identically on every push. See [`docs/PHASE_6_REPORT.md`](docs/PHASE_6_REPORT.md) and the live status in [`docs/WORKLOG.md`](docs/WORKLOG.md).
+> **Status: Phase 7 — Visual Editor.**
+> Phases 0-7 complete and CI-verified on Windows / Linux / macOS: workspace + core runtime + ECS + math; offscreen-first wgpu renderer with GPU screenshots; rapier3d physics; kira headless audio; pure action-mapped input; skeletal animation + egui UI + deterministic AI; sandboxed Rhai scripting + glTF import + hash-verified saves; versioned JSON scene documents (data assets) plus QUIC loopback networking whose replication replays bit-identically on every push; and now a docked-panel visual editor (scene hierarchy, live 3D viewport with orbit camera and gizmo, component inspector, asset browser, tracing-backed console) rendered offscreen-first and snapshotted in CI. See [`docs/PHASE_7_REPORT.md`](docs/PHASE_7_REPORT.md) and the live status in [`docs/WORKLOG.md`](docs/WORKLOG.md).
 
 
 ## Design Goals
@@ -43,7 +43,7 @@ The workspace, dependency graph, and profiles are defined in Phase 1 (see `docs/
 | 4 | Animation + UI + AI | **Complete** | [`docs/PHASE_4_REPORT.md`](docs/PHASE_4_REPORT.md) |
 | 5 | Scripting + assets + save | **Complete** | [`docs/PHASE_5_REPORT.md`](docs/PHASE_5_REPORT.md) |
 | 6 | Networking + data assets | **Complete** | [`docs/PHASE_6_REPORT.md`](docs/PHASE_6_REPORT.md) |
-| 7 | Visual editor | Pending | — |
+| 7 | Visual editor | **Complete** | [`docs/PHASE_7_REPORT.md`](docs/PHASE_7_REPORT.md) |
 | 8 | Profiling + debugging + build pipeline | Pending | — |
 | 9 | Cinematics + world building + plugins | Pending | — |
 | 10 | Final testing + benchmarks + validation | Pending | — |
@@ -100,6 +100,12 @@ cargo run -p gens-runtime --example animate_hello -- --steps 900 --out animate_h
 # (host simulates -> world snapshot crosses a real QUIC session at step 300 ->
 #  client continues -> final captures byte-identical; CPU-only, no GPU needed)
 cargo run -p gens-runtime --example net_hello -- --steps 600 --replicate-at 300 --out net_hello.json
+
+# Phase 7: the visual editor end-to-end (needs any Vulkan/DX12/Metal
+# adapter; software like lavapipe works). Builds the reference scene,
+# performs a real pointer-click orbit/edit/save replay, writes the
+# composite PNG + per-frame FNV hashes, twice, byte-identical:
+cargo run -p gens-editor --example editor_hello -- --steps 24 --out editor_hello
 
 # run the GPU integration tests too (requires an adapter):
 cargo test -p gens-renderer -- --ignored

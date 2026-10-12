@@ -54,7 +54,11 @@ if [ -f /tmp/gens_verify_gpu.png ]; then
 else
   echo "gpu smoke: GPU-SKIP (no adapter here; CI renders on Linux/macOS)"
 fi
-say "[11/11] binary size gate"
+say "[11/12] editor example build (the example itself needs an adapter; CI renders it)"
+cargo build -q -p gens-editor --examples
+echo "editor example: built (GPU render proven in CI on Linux/macOS)"
+
+say "[12/12] binary size gate"
 # Calibrated in Phase 2 (ADR-0012): gpu_hello debug binary measured
 # 171.3 MiB on Linux x86_64 (wgpu-linked); gate = 2x headroom.
 LIMIT_BYTES=$((350 * 1024 * 1024))

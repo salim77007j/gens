@@ -189,6 +189,27 @@ jobs:
             echo "gpu smoke snapshot: $(wc -c < smoke_gpu.png) bytes"
           fi
 
+      - name: Headless editor smoke (full editor UI + viewport render + determinism)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # The editor is GPU-bound everywhere: Linux (lavapipe) and macOS
+          # (Metal) must render for real; Windows is best-effort like the
+          # GPU smoke (adapter presence varies by runner image).
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            if cargo run -p gens-editor --example editor_hello -- --steps 24 --out smoke_editor; then
+              test -f smoke_editor.png
+              echo "editor smoke snapshot: $(wc -c < smoke_editor.png) bytes"
+            else
+              echo "EDITOR-SKIP: Windows runner had no usable adapter this run (documented in the phase report)"
+            fi
+          else
+            cargo run -p gens-editor --example editor_hello -- --steps 24 --out smoke_editor
+            test -f smoke_editor.png
+            test -f smoke_editor.json
+            echo "editor smoke snapshot: $(wc -c < smoke_editor.png) bytes"
+          fi
+
       - name: Upload smoke artifacts
         if: steps.detect.outputs.active == 'true' && runner.os == 'Linux'
         uses: actions/upload-artifact@v4
@@ -201,6 +222,8 @@ jobs:
             smoke_animate.json
             smoke_asset_script.json
             smoke_net.json
+            smoke_editor.png
+            smoke_editor.json
 
       - name: Binary size gate
         if: steps.detect.outputs.active == 'true'
