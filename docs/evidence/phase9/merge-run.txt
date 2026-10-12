@@ -1,0 +1,4 @@
+Phase 9 merge evidence — main run #121 (green) on merge commit 06f08a8
+3-OS matrix (ubuntu/windows/macos): fmt, clippy -D warnings, build, 468 tests, GPU tests (Linux/macOS), 11 headless smokes incl. the 3 new phase 9 smokes (cinematic/worldgen/plugin), binary size gates (debug + release enforced by CI).
+Branch ledger: runs #111-#120 on phase9-cinematics-world-plugins, all green (see ci-runs.txt).
+This commit is the pre-phase10-safe rollback anchor.
