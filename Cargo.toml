@@ -16,6 +16,7 @@ members = [
     "crates/gens-networking",
     "crates/gens-editor",
     "crates/gens-runtime",
+    "crates/gens-profiler",
 ]
 
 [workspace.package]
