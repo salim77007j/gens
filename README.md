@@ -1,5 +1,5 @@
-> **Status: Phase 7 — Visual Editor.**
-> Phases 0-7 complete and CI-verified on Windows / Linux / macOS: workspace + core runtime + ECS + math; offscreen-first wgpu renderer with GPU screenshots; rapier3d physics; kira headless audio; pure action-mapped input; skeletal animation + egui UI + deterministic AI; sandboxed Rhai scripting + glTF import + hash-verified saves; versioned JSON scene documents (data assets) plus QUIC loopback networking whose replication replays bit-identically on every push; and now a docked-panel visual editor (scene hierarchy, live 3D viewport with orbit camera and gizmo, component inspector, asset browser, tracing-backed console) rendered offscreen-first and snapshotted in CI. See [`docs/PHASE_7_REPORT.md`](docs/PHASE_7_REPORT.md) and the live status in [`docs/WORKLOG.md`](docs/WORKLOG.md).
+> **Status: Phase 8 — Profiling + Debugging + Build Pipeline.**
+> Phases 0-8 complete and CI-verified on Windows / Linux / macOS: workspace + core runtime + ECS + math; offscreen-first wgpu renderer with GPU screenshots; rapier3d physics; kira headless audio; pure action-mapped input; skeletal animation + egui UI + deterministic AI; sandboxed Rhai scripting + glTF import + hash-verified saves; versioned JSON scene documents plus QUIC loopback networking; a docked-panel visual editor; and now observation-only profiling (nested spans, aggregation reports, allocator-level memory tracking — the profiler-on/off replay is proven byte-identical), debugging tools (canonical world dumps, a typed invariant validator, console commands that execute against the live world), and a build pipeline (GENSPKG1 hash-verified game packages, `gens-pkg`/`gens-player` CLIs, a headless player with run reports, plus environment-disclosed step benchmarks and debug+release binary size gates). See [`docs/PHASE_8_REPORT.md`](docs/PHASE_8_REPORT.md) and the live status in [`docs/WORKLOG.md`](docs/WORKLOG.md).
 
 
 ## Design Goals
@@ -44,7 +44,7 @@ The workspace, dependency graph, and profiles are defined in Phase 1 (see `docs/
 | 5 | Scripting + assets + save | **Complete** | [`docs/PHASE_5_REPORT.md`](docs/PHASE_5_REPORT.md) |
 | 6 | Networking + data assets | **Complete** | [`docs/PHASE_6_REPORT.md`](docs/PHASE_6_REPORT.md) |
 | 7 | Visual editor | **Complete** | [`docs/PHASE_7_REPORT.md`](docs/PHASE_7_REPORT.md) |
-| 8 | Profiling + debugging + build pipeline | Pending | — |
+| 8 | Profiling + debugging + build pipeline | **Complete** | [`docs/PHASE_8_REPORT.md`](docs/PHASE_8_REPORT.md) |
 | 9 | Cinematics + world building + plugins | Pending | — |
 | 10 | Final testing + benchmarks + validation | Pending | — |
 

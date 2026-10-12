@@ -1,0 +1,21 @@
+# Phase 8 CI run ledger — branch phase8-profiling-debugging-build
+
+| Run | Commit | Result | Note |
+|---|---|---|---|
+| #97 | b280a40 P8-0 | success | gens-profiler scaffold + ADR-0027 |
+| #98 | 38581f0 P8-1 | **failure** | Format check failed on 3 OS: the median-expectation fix committed after the last cargo fmt run — repaired in P8-2's fmt leg; lesson: fmt gate runs BEFORE every commit |
+| #99 | 9046abb | cancelled | superseded by force-push (commit message amended to honestly cover the memory module it swept in) |
+| #100 | 729b4fa P8-2 | success | profiler core (spans + report) + memory tracking allocator |
+| #101 | 3795299 P8-3 | **failure** | windows-latest unit tests: memory::tests::totals_are_self_consistent raced on process-global counters (two non-atomic reads inverted under parallel load) — fixed with monotonic-only assertion families in P8-4 |
+| #102 | 9bd8475 P8-4 | success | debug module (debug_dump + validate_world) + flaky-test fix |
+| #103 | ce9b272 P8-5 | success | gens-build: GENSPKG1 packages + CLIs + headless player |
+| #104 | b259ff7 P8-6 | success | editor integration: real Profiler/Performance tabs, status-bar CPU/Mem, console commands |
+| #105 | 272dd04 P8-7 | success | bench_step (environment-disclosed benchmarks) |
+| #106 | 835d08b P8-8 | success | 3 new smokes (profiler/package/bench) green on 3 OS + debug/release size gates pass |
+| #107 | (docs commit) P8-9 | success | phase report + ADR ledger + risks + worklog + README row 8 + evidence |
+
+Local evidence (this directory):
+- profile_hello_local.json — the ADR-0027 proof run (600 steps, identical hashes, phase quartiles, memory snapshot)
+- bench_local.json — debug/linux bench (3 scenarios, 12 samples each)
+- player_cli_run.json — gens-player CLI run over a gens-pkg-built package (300 steps)
+- verify_profile_smoke.json / verify_package_smoke.json — verify.sh gate artifacts
