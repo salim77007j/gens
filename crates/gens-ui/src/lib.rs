@@ -34,5 +34,6 @@ pub mod frame;
 pub use backend::{UiRender, UiRenderer};
 pub use context::UiContext;
 pub use frame::{
-    TextureFree, TextureRef, TextureUpload, UiEvent, UiFrame, UiInput, UiMesh, UiVertex,
+    TextureFree, TextureRef, TextureUpload, UiEvent, UiFrame, UiInput, UiKey, UiMesh, UiModifiers,
+    UiVertex,
 };
