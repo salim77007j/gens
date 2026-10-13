@@ -1,0 +1,54 @@
+# v1.1.0 release ledger — Release pipeline runs (tag v1.1.0, ADR-0036)
+
+## Run #1 (tag @ 52bae73) — RED
+- build-linux RED: the packaged-editor launch check opened the editor on a
+  displayless runner — job log: "event loop creation failed: ... neither
+  WAYLAND_DISPLAY nor WAYLAND_SOCKET nor DISPLAY is set" (winit could not
+  exist without xvfb). All other build jobs green (macOS Metal launch check
+  passed).
+- Fix e2e5-style hotfix on release-hotfix-window-display (CI green) → merged
+  main ac828d4 (CI #38406181780 green) → tag re-pointed.
+
+## Run #2 (tag @ ac828d4) — RED
+- build-linux RED (one step further): "error: no GPU adapter ... install
+  mesa-vulkan-drivers (lavapipe)" — the xvfb window opened (run #1's fix
+  worked) but the release Linux jobs never installed the software Vulkan
+  adapter the CI gates job uses (ADR-0011).
+- Hotfix #2 on release-hotfix-lavapipe (CI #38409167350 green): lavapipe
+  joins xvfb in build-linux AND verify-linux → merged main 9d6425d
+  (CI #38410193548 green) → tag re-pointed.
+
+## Run #3 (tag @ 9d6425d) — ALL GREEN (run 38411851291)
+Build jobs (all green): linux-x86_64 (incl. packaged-editor xvfb launch
+check), windows-x86_64 (incl. desktop launch check), macos-aarch64 (incl.
+Metal launch check), example games (.genspkg built+verified+player-run),
+gens-release-1 manifest. release/publish green: 10 assets attached,
+SHA256SUMS over every asset, notes = docs/RELEASE_V1_1_NOTES.md, --latest.
+
+## Launch verification of the PUBLISHED zips (run #3 verify jobs)
+- verify / linux (xvfb + lavapipe — HARD gate):
+  EDITOR-WINDOW-VERIFY-OK: {"ctrl_s_saved_scene": true, "pause_worked": true,
+  "play_button_clicked": true, "play_started_simulation": true,
+  "stop_restored_edit_mode": true, "viewport_drag_frames": 3}
+  → the PUBLISHED Linux editor opened a real window, presented 130222 bytes.
+  PLAYER-VERIFY-OK (published gens-player ran the published game clean).
+- verify / macos (Metal — HARD gate):
+  EDITOR-WINDOW-VERIFY-OK (same verdict set), 125976 bytes presented.
+  PLAYER-VERIFY-OK.
+- verify / windows (desktop, GPU best-effort convention):
+  EDITOR-WINDOW-VERIFY-OK: the published Windows editor OPENED A REAL WINDOW
+  (verify_editor_window.png: 131368 bytes). PLAYER-VERIFY-OK + PKG-VERIFY-OK.
+
+## Independent download check (release author, Linux sandbox)
+- Downloaded gens-editor-windows-x86_64.zip from the release: 14,573,021
+  bytes; sha256 3f50314eb96aa7ee914c6c09e3788160ee87cc82cc87d4c7e80afb4dd20d7106
+  == SHA256SUMS line ("gens-editor-windows-x86_64.zip: OK").
+- Contents: gens-editor.exe (16,782,336 bytes, PE32+ x86-64), the
+  gens-editor-headless-replay.exe demo, README.txt (v1.1 bundle scope).
+- The sandbox cannot execute PEs — the launch proof is the verify-windows
+  job above, which ran THIS EXACT published binary on a real Windows
+  desktop and opened a real window.
+
+## Release URL
+https://github.com/salim77007j/gens/releases/tag/v1.1.0 (marked Latest;
+/releases/latest resolves to v1.1.0)
