@@ -82,7 +82,9 @@ jobs:
           set -eu
           mkdir -p launch-check && cd launch-check
           unzip -q ../dist/gens-editor-linux-x86_64.zip
-          ./gens-editor --smoke-frames 22 --width 1600 --height 900 \
+          # The runner has no display server: xvfb IS the window system
+          # for this check (the same convention ci.yml uses).
+          xvfb-run -a ./gens-editor --smoke-frames 22 --width 1600 --height 900 \
             --screenshot editor_window.png --json editor_window.json
           python3 - <<'PY'
           import json
