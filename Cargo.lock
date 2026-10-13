@@ -945,6 +945,8 @@ name = "gens-cinematics"
 version = "0.1.0"
 dependencies = [
  "gens-math",
+ "serde",
+ "serde_json",
  "thiserror",
 ]
 

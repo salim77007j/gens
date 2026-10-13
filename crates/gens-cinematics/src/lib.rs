@@ -41,6 +41,12 @@ pub mod timeline;
 
 pub mod player;
 
+pub mod document;
+
+pub use document::{
+    DocumentError, FORMAT_TAG, content_hash, from_document, to_canonical_json, to_pretty_json,
+};
+
 pub use player::{CinematicPlayer, LoopMode, PlaybackState, PlayerError};
 pub use timeline::{
     CameraCut, Channel, ChannelKind, SampledValue, TargetChannel, Timeline, TimelineError,
