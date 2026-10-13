@@ -254,6 +254,15 @@ fn run_editor(steps: usize, out_dir: &Path, capture_png: bool) -> Result<RunRepo
                                 info!("Entity deleted");
                             }
                         }
+                        // v1.1 commands route through the SHARED executor
+                        // (the interactive bin runs exactly this).
+                        other => {
+                            gens_editor::commands::execute_editor_command(
+                                &mut shell.state,
+                                &mut world,
+                                &other,
+                            );
+                        }
                     }
                 }
                 // Console commands (real execution against the world; the

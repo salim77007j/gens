@@ -21,9 +21,9 @@
 
 use crate::{
     console::{ConsoleBuffer, ConsoleSink},
-    model::EditorCommand,
+    model::{CreateKind, EditorCommand, UndoOp},
     theme,
-    viewport::EditorViewport,
+    viewport::{EditorViewport, ViewportDrag},
 };
 use gens_assets::AssetRegistry;
 use gens_ecs::prelude::*;
@@ -110,6 +110,29 @@ pub struct FrameStats {
     pub entities: usize,
 }
 
+/// Simulation playback state (v1.1 play mode).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PlayMode {
+    /// Editing: simulation idle (propagation still runs so edits show).
+    #[default]
+    Idle,
+    /// Simulation steps at the fixed rate, wall-clock driven.
+    Playing,
+    /// Stepping suspended; the live state is kept (resume with Play).
+    Paused,
+}
+
+impl PlayMode {
+    /// Status-bar label.
+    pub fn label(self) -> &'static str {
+        match self {
+            PlayMode::Idle => "Edit",
+            PlayMode::Playing => "Playing",
+            PlayMode::Paused => "Paused",
+        }
+    }
+}
+
 /// All session state the panels read and write.
 #[derive(Debug, Clone, Default)]
 pub struct EditorState {
@@ -154,6 +177,20 @@ pub struct EditorState {
     /// the same intent-queue pattern as [`EditorCommand`] (the shell
     /// never executes world-level work itself).
     pub pending_commands: Vec<String>,
+    /// Play-mode state (v1.1): Edit / Playing / Paused.
+    pub play_mode: PlayMode,
+    /// Simulation clock accumulated while playing (seconds).
+    pub play_time: f64,
+    /// The pre-play world snapshot (captured on Play, consumed on Stop).
+    pub play_snapshot: Option<crate::playmode::WorldSnapshot>,
+    /// Undo history (most recent last), applied by the app via
+    /// [`crate::commands::apply_undo`]. Cleared on scene load and on
+    /// play-mode Stop (entity ids die in both).
+    pub undo_stack: Vec<UndoOp>,
+    /// Live viewport drag state (object move vs camera orbit), written
+    /// by the viewport panel, consumed by the app after the drag ends
+    /// (the undo op is recorded there).
+    pub viewport_drag: Option<ViewportDrag>,
     /// Live cinematic snapshot the Animator + Game View tabs read
     /// (None = no cinematic; the tabs render honest empty states).
     pub cinematic: Option<crate::cinema::CinematicPanelData>,
@@ -304,6 +341,7 @@ fn paint(
     viewport: &EditorViewport,
 ) {
     menu_bar(ui, state);
+    play_toolbar(ui, state);
     status_bar(ui, state);
     if state.show_bottom_dock {
         bottom_dock(ui, state, assets);
@@ -317,9 +355,38 @@ fn paint(
     center_dock(ui, state, viewport, world);
 }
 
-/// Top menu bar (File / Edit / View / Help) — items queue real
-/// commands; decoration-only items are deliberately absent.
+/// Top menu bar (File / Edit / GameObject / View / Help) with real
+/// keyboard shortcuts. Items queue real commands; decoration-only
+/// items are deliberately absent.
 fn menu_bar(ui: &mut egui::Ui, state: &mut EditorState) {
+    // Keyboard shortcuts run BEFORE the menus: they work whether or not
+    // a menu is open. Typing-focused keys (Delete, undo, duplicate) are
+    // suppressed while a text field has focus; save/load stay global.
+    let typing = ui.ctx().egui_wants_keyboard_input();
+    ui.input_mut(|input| {
+        if input.consume_key(egui::Modifiers::COMMAND, egui::Key::S) {
+            state
+                .pending
+                .push(EditorCommand::SaveScene(default_scene_path()));
+        }
+        if input.consume_key(egui::Modifiers::COMMAND, egui::Key::O) {
+            state
+                .pending
+                .push(EditorCommand::LoadScene(default_scene_path()));
+        }
+        if !typing {
+            if input.consume_key(egui::Modifiers::COMMAND, egui::Key::Z) {
+                state.pending.push(EditorCommand::Undo);
+            }
+            if input.consume_key(egui::Modifiers::COMMAND, egui::Key::D) {
+                state.pending.push(EditorCommand::DuplicateSelected);
+            }
+            if input.consume_key(egui::Modifiers::NONE, egui::Key::Delete) {
+                state.pending.push(EditorCommand::DeleteSelected);
+            }
+        }
+    });
+
     egui::Panel::top("menu_bar")
         .exact_size(24.0)
         .frame(
@@ -330,28 +397,78 @@ fn menu_bar(ui: &mut egui::Ui, state: &mut EditorState) {
         .show(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 ui.menu_button("File", |ui| {
-                    if ui.button("Save Scene").clicked() {
-                        // Deterministic autosave path; the app executes.
-                        state.pending.push(EditorCommand::SaveScene(
-                            "autosave_001.genssave".to_string(),
-                        ));
+                    let save = ui
+                        .add(egui::Button::new("Save Scene").shortcut_text("Ctrl+S"))
+                        .clicked();
+                    let load = ui
+                        .add(egui::Button::new("Load Scene").shortcut_text("Ctrl+O"))
+                        .clicked();
+                    if save {
+                        state
+                            .pending
+                            .push(EditorCommand::SaveScene(default_scene_path()));
+                        ui.close();
+                    }
+                    if load {
+                        state
+                            .pending
+                            .push(EditorCommand::LoadScene(default_scene_path()));
                         ui.close();
                     }
                 });
                 ui.menu_button("Edit", |ui| {
                     let has_selection = state.selected.is_some();
                     if ui
-                        .add_enabled(has_selection, egui::Button::new("Duplicate Selected"))
+                        .add_enabled(true, egui::Button::new("Undo").shortcut_text("Ctrl+Z"))
+                        .clicked()
+                    {
+                        state.pending.push(EditorCommand::Undo);
+                        ui.close();
+                    }
+                    if ui
+                        .add_enabled(
+                            has_selection,
+                            egui::Button::new("Duplicate Selected").shortcut_text("Ctrl+D"),
+                        )
                         .clicked()
                     {
                         state.pending.push(EditorCommand::DuplicateSelected);
                         ui.close();
                     }
                     if ui
-                        .add_enabled(has_selection, egui::Button::new("Delete Selected"))
+                        .add_enabled(
+                            has_selection,
+                            egui::Button::new("Delete Selected").shortcut_text("Del"),
+                        )
                         .clicked()
                     {
                         state.pending.push(EditorCommand::DeleteSelected);
+                        ui.close();
+                    }
+                });
+                ui.menu_button("GameObject", |ui| {
+                    let mut created: Option<CreateKind> = None;
+                    if ui.button("Create Empty").clicked() {
+                        created = Some(CreateKind::Empty);
+                    }
+                    if ui.button("Create Cube").clicked() {
+                        created = Some(CreateKind::Cube);
+                    }
+                    if ui.button("Create Marker").clicked() {
+                        created = Some(CreateKind::Marker);
+                    }
+                    ui.separator();
+                    let has_selection = state.selected.is_some();
+                    if ui
+                        .add_enabled(has_selection, egui::Button::new("Delete Selected"))
+                        .clicked()
+                    {
+                        created = None;
+                        state.pending.push(EditorCommand::DeleteSelected);
+                        ui.close();
+                    }
+                    if let Some(kind) = created {
+                        state.pending.push(EditorCommand::CreateObject(kind));
                         ui.close();
                     }
                 });
@@ -361,12 +478,84 @@ fn menu_bar(ui: &mut egui::Ui, state: &mut EditorState) {
                     ui.toggle_value(&mut state.show_bottom_dock, "Bottom Dock");
                 });
                 ui.menu_button("Help", |ui| {
-                    ui.label(egui::RichText::new("Gens Engine — visual editor").strong());
+                    ui.label(egui::RichText::new("Gens Engine — visual editor (v1.1)").strong());
+                    ui.separator();
+                    ui.label(egui::RichText::new(
+                        "Click an object to select; drag it to move.\nDrag empty space to orbit; Ctrl+S save; Ctrl+O load;\nCtrl+Z undo; Ctrl+D duplicate; Del delete.",
+                    ));
                     ui.label(
-                        egui::RichText::new("offscreen-first build; see docs/design/REFERENCE.png")
-                            .color(theme::TEXT_DIM),
+                        egui::RichText::new("see docs/design/REFERENCE.png").color(theme::TEXT_DIM),
                     );
                 });
+            });
+        });
+}
+
+/// The deterministic default path the save/load items use (the editor
+/// is session-scoped; no file dialogs in v1.1 — ADR-0036 documents the
+/// boundary).
+fn default_scene_path() -> String {
+    "scene.gensscene".to_string()
+}
+
+/// The play toolbar (v1.1): Play / Pause / Stop / Save / Load buttons
+/// plus the live mode + simulation clock. Buttons queue real commands
+/// — execution stays with the app (the shell owns intent).
+fn play_toolbar(ui: &mut egui::Ui, state: &mut EditorState) {
+    egui::Panel::top("play_toolbar")
+        .exact_size(30.0)
+        .frame(
+            egui::Frame::default()
+                .fill(theme::PANEL_BG)
+                .inner_margin(egui::Margin::symmetric(8, 4)),
+        )
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                let playing = state.play_mode == PlayMode::Playing;
+                let paused = state.play_mode == PlayMode::Paused;
+                if ui
+                    .add_enabled(!playing, egui::Button::new("Play"))
+                    .clicked()
+                {
+                    state.pending.push(EditorCommand::Play);
+                }
+                if ui
+                    .add_enabled(playing, egui::Button::new("Pause"))
+                    .clicked()
+                {
+                    state.pending.push(EditorCommand::Pause);
+                }
+                if ui
+                    .add_enabled(playing || paused, egui::Button::new("Stop"))
+                    .clicked()
+                {
+                    state.pending.push(EditorCommand::Stop);
+                }
+                ui.separator();
+                if ui.button("Save").clicked() {
+                    state
+                        .pending
+                        .push(EditorCommand::SaveScene(default_scene_path()));
+                }
+                if ui.button("Load").clicked() {
+                    state
+                        .pending
+                        .push(EditorCommand::LoadScene(default_scene_path()));
+                }
+                ui.separator();
+                let mode_color = match state.play_mode {
+                    PlayMode::Idle => theme::TEXT_DIM,
+                    PlayMode::Playing => theme::SEVERITY[0],
+                    PlayMode::Paused => theme::GIZMO_AXES[2],
+                };
+                ui.label(
+                    egui::RichText::new(format!(
+                        "{}  t={:.2}s",
+                        state.play_mode.label(),
+                        state.play_time
+                    ))
+                    .color(mode_color),
+                );
             });
         });
 }

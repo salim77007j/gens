@@ -23,7 +23,7 @@
 //! - `WorldTransform` is never captured — it is derived state,
 //!   recomputed by propagation on the next frame.
 
-use crate::model::{AuthoredBody, MeshSlot};
+use crate::model::{AuthoredBody, MeshSlot, ShapeKind};
 use gens_core::anyhow::{Result, anyhow, ensure};
 use gens_ecs::ecs::prelude::Entity;
 use gens_ecs::ecs::world::World;
@@ -263,6 +263,267 @@ pub fn body_kind_label(kind: BodyKind) -> &'static str {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Scene document (`gensscene-1`): the editor's lossless save/load format.
+//
+// A mirror of [`WorldSnapshot`] in plain serde types — deliberately NOT
+// derives on the engine components (the runtime save format taught us the
+// vocabulary boundary matters; the scene document speaks the EDITOR's
+// vocabulary and its own version tag).
+// ---------------------------------------------------------------------------
+
+/// The scene document format tag.
+pub const SCENE_FORMAT: &str = "gensscene-1";
+
+/// The on-disk scene document.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SceneDocument {
+    /// Always [`SCENE_FORMAT`] (verified on load).
+    pub format: String,
+    /// Captured entities, entity-index order.
+    pub entities: Vec<SceneEntity>,
+}
+
+/// One entity in the scene document.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SceneEntity {
+    /// Name (the hierarchy key).
+    pub name: Option<String>,
+    /// Parent's name.
+    pub parent: Option<String>,
+    /// Local transform.
+    pub transform: Option<SceneTransform>,
+    /// Active flag.
+    pub active: bool,
+    /// Mesh slot.
+    pub mesh: Option<SceneMesh>,
+    /// Authored body.
+    pub body: Option<SceneBody>,
+    /// Script binding.
+    pub script: Option<SceneScript>,
+}
+
+/// Transform as plain numbers (position, quaternion xyzw, scale).
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SceneTransform {
+    /// Position.
+    pub position: [f32; 3],
+    /// Rotation quaternion (x, y, z, w).
+    pub rotation: [f32; 4],
+    /// Scale.
+    pub scale: [f32; 3],
+}
+
+/// Mesh slot as plain data.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SceneMesh {
+    /// Shape label ("cube" | "quad" | "marker").
+    pub shape: String,
+    /// Tint RGBA8.
+    pub tint: [u8; 4],
+}
+
+/// Authored body as plain data.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SceneBody {
+    /// Kind label ("dynamic" | "fixed" | "kinematic").
+    pub kind: String,
+    /// CCD flag.
+    pub ccd: bool,
+    /// Linear damping.
+    pub linear_damping: f32,
+    /// Collider.
+    pub collider: SceneCollider,
+    /// Friction 0..=1.
+    pub friction: f32,
+    /// Restitution 0..=1.
+    pub restitution: f32,
+    /// Density.
+    pub density: f32,
+}
+
+/// Collider as a tagged plain-data enum.
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SceneCollider {
+    /// Sphere.
+    Ball {
+        /// Radius.
+        radius: f32,
+    },
+    /// Axis-aligned box.
+    Cuboid {
+        /// Half extents.
+        half_extents: [f32; 3],
+    },
+}
+
+/// Script binding as plain data (transient per-tick state excluded).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SceneScript {
+    /// Asset key of the compiled script.
+    pub script: String,
+    /// Entry function.
+    pub entry: String,
+}
+
+/// Serializes the live world into a `gensscene-1` document (JSON).
+///
+/// # Errors
+/// Returns an error when serialization fails (cannot happen for valid
+/// snapshots — floats are finite per the invariant checker — but the
+/// signature stays honest).
+pub fn save_scene_document(world: &World) -> Result<String> {
+    let snapshot = capture(world);
+    document_from_snapshot(&snapshot)
+}
+
+/// Restores a `gensscene-1` document into the live world.
+///
+/// # Errors
+/// Bad format tag, malformed JSON, or a [`playmode::restore`] failure
+/// (dangling parents, duplicate names).
+pub fn load_scene_document(world: &mut World, json: &str) -> Result<()> {
+    let document: SceneDocument =
+        serde_json::from_str(json).map_err(|e| anyhow!("scene document is not valid JSON: {e}"))?;
+    ensure!(
+        document.format == SCENE_FORMAT,
+        "expected format '{SCENE_FORMAT}', got '{}'",
+        document.format
+    );
+    let snapshot = snapshot_from_document(&document)?;
+    restore(world, &snapshot)
+}
+
+/// Snapshot -> document (pure; the round-trip is unit-tested).
+///
+/// # Errors
+/// Propagates serialization failures.
+pub fn document_from_snapshot(snapshot: &WorldSnapshot) -> Result<String> {
+    let entities: Vec<SceneEntity> = snapshot.entities.iter().map(scene_entity_from).collect();
+    let document = SceneDocument {
+        format: SCENE_FORMAT.to_string(),
+        entities,
+    };
+    serde_json::to_string(&document)
+        .map_err(|e| anyhow!("scene document serialization failed: {e}"))
+}
+
+/// Document -> snapshot (pure; validates the format tag).
+///
+/// # Errors
+/// Unknown format tag or unparseable document.
+pub fn snapshot_from_document(document: &SceneDocument) -> Result<WorldSnapshot> {
+    ensure!(
+        document.format == SCENE_FORMAT,
+        "expected format '{SCENE_FORMAT}', got '{}'",
+        document.format
+    );
+    Ok(WorldSnapshot {
+        entities: document.entities.iter().map(entity_from_scene).collect(),
+    })
+}
+
+fn scene_entity_from(entity: &EntitySnapshot) -> SceneEntity {
+    SceneEntity {
+        name: entity.name.clone(),
+        parent: entity.parent.clone(),
+        transform: entity.transform.map(|t| SceneTransform {
+            position: t.position.to_array(),
+            rotation: [t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w],
+            scale: t.scale.to_array(),
+        }),
+        active: entity.active,
+        mesh: entity.mesh.map(|m| SceneMesh {
+            shape: shape_label(m.shape).to_string(),
+            tint: m.tint,
+        }),
+        body: entity.body.map(|b| SceneBody {
+            kind: body_kind_label(b.kind).to_lowercase(),
+            ccd: b.ccd,
+            linear_damping: b.linear_damping,
+            collider: match b.collider {
+                gens_physics::ColliderShape::Ball(r) => SceneCollider::Ball { radius: r },
+                gens_physics::ColliderShape::Cuboid(h) => SceneCollider::Cuboid {
+                    half_extents: h.to_array(),
+                },
+            },
+            friction: b.friction,
+            restitution: b.restitution,
+            density: b.density,
+        }),
+        script: entity.script.as_ref().map(|s| SceneScript {
+            script: s.script.clone(),
+            entry: s.entry.clone(),
+        }),
+    }
+}
+
+fn entity_from_scene(entity: &SceneEntity) -> EntitySnapshot {
+    EntitySnapshot {
+        name: entity.name.clone(),
+        parent: entity.parent.clone(),
+        transform: entity.transform.map(|t| Transform {
+            position: gens_math::Vec3::from_array(t.position),
+            rotation: gens_math::Quat::from_xyzw(
+                t.rotation[0],
+                t.rotation[1],
+                t.rotation[2],
+                t.rotation[3],
+            ),
+            scale: gens_math::Vec3::from_array(t.scale),
+        }),
+        active: entity.active,
+        mesh: entity.mesh.as_ref().map(|m| MeshSlot {
+            shape: shape_from_label(&m.shape),
+            tint: m.tint,
+        }),
+        body: entity.body.as_ref().map(|b| AuthoredBody {
+            kind: kind_from_label(&b.kind),
+            ccd: b.ccd,
+            linear_damping: b.linear_damping,
+            collider: match b.collider {
+                SceneCollider::Ball { radius } => gens_physics::ColliderShape::Ball(radius),
+                SceneCollider::Cuboid { half_extents } => {
+                    gens_physics::ColliderShape::Cuboid(gens_math::Vec3::from_array(half_extents))
+                }
+            },
+            friction: b.friction,
+            restitution: b.restitution,
+            density: b.density,
+        }),
+        script: entity.script.as_ref().map(|s| {
+            let mut component = ScriptComponent::new(s.script.clone());
+            component.entry = s.entry.clone();
+            component
+        }),
+    }
+}
+
+fn shape_label(shape: ShapeKind) -> &'static str {
+    match shape {
+        ShapeKind::Cube => "cube",
+        ShapeKind::Quad => "quad",
+        ShapeKind::Marker => "marker",
+    }
+}
+
+fn shape_from_label(label: &str) -> ShapeKind {
+    match label {
+        "quad" => ShapeKind::Quad,
+        "marker" => ShapeKind::Marker,
+        _ => ShapeKind::Cube,
+    }
+}
+
+fn kind_from_label(label: &str) -> BodyKind {
+    match label {
+        "fixed" => BodyKind::Fixed,
+        "kinematic" => BodyKind::KinematicPosition,
+        _ => BodyKind::Dynamic,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -463,5 +724,30 @@ mod tests {
         restore(&mut world, &snapshot).expect("restore");
         let _ = world.resource::<PhysicsResource>();
         assert!(has_scene_entities(&world));
+    }
+
+    #[test]
+    fn scene_document_round_trips_losslessly() {
+        let mut world = World::new();
+        let mut physics = PhysicsWorld::new(vec3(0.0, -9.81, 0.0));
+        build_test_world(&mut world, &mut physics);
+        let before = capture(&world);
+
+        let json = save_scene_document(&world).expect("save");
+        assert!(json.contains(SCENE_FORMAT), "format tag must be embedded");
+
+        // Load into a FRESH world; the capture must match exactly.
+        let mut fresh = World::new();
+        load_scene_document(&mut fresh, &json).expect("load");
+        let after = capture(&fresh);
+        assert_eq!(before, after, "scene documents must round-trip losslessly");
+
+        // Bad format tag / malformed JSON are loud errors.
+        let mut bad: SceneDocument = serde_json::from_str(&json).unwrap();
+        bad.format = "nope-0".into();
+        let err = snapshot_from_document(&bad).unwrap_err();
+        assert!(err.to_string().contains("expected format"), "{err}");
+        let err = load_scene_document(&mut World::new(), "{oops").unwrap_err();
+        assert!(err.to_string().contains("not valid JSON"), "{err}");
     }
 }

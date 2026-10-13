@@ -6,7 +6,8 @@
 //! build time, and the inspector edits both directly in the world.
 //! Nothing here is display-only: every field is consumed by engine code.
 
-use gens_ecs::ecs::prelude::Component;
+use gens_ecs::Transform;
+use gens_ecs::ecs::prelude::{Component, Entity};
 use gens_physics::world::{BodyKind, BodySpec, ColliderShape, ColliderSpec};
 
 /// Primitive the viewport rasterizes for an entity.
@@ -113,17 +114,87 @@ impl Default for AuthoredBody {
     }
 }
 
-/// Editor commands queued by the menu bar, drained by the embedding app
-/// (example binary / future window shell). The shell never executes
-/// world-level commands itself — it only records intent.
+/// Editor commands queued by the menu bar / toolbar / shortcuts,
+/// drained by the embedding app (the interactive bin, the headless
+/// example). The shell never executes world-level commands itself —
+/// it only records intent; [`crate::commands::execute_editor_command`]
+/// is the shared executor both apps call.
 #[derive(Debug, Clone, PartialEq)]
 pub enum EditorCommand {
-    /// File > Save Scene: write the REAL GENSSAVE1 format to this path.
+    /// File > Save Scene / Ctrl+S / toolbar Save: write the lossless
+    /// editor scene document (`gensscene-1`, full authored vocabulary)
+    /// to this path.
     SaveScene(String),
-    /// Edit > Duplicate Selected: clone the known component set.
+    /// File > Load Scene / Ctrl+O / toolbar Load: restore a
+    /// `gensscene-1` document into the live world.
+    LoadScene(String),
+    /// Edit > Duplicate Selected / Ctrl+D: clone the known component set.
     DuplicateSelected,
-    /// Edit > Delete Selected: despawn the selection.
+    /// Edit > Delete Selected / Delete: despawn the selection.
     DeleteSelected,
+    /// Edit > Undo / Ctrl+Z: pop the undo stack.
+    Undo,
+    /// Toolbar Play: capture the pre-play snapshot and start stepping.
+    Play,
+    /// Toolbar Pause: stop stepping, keep the live state.
+    Pause,
+    /// Toolbar Stop: restore the pre-play snapshot, back to editing.
+    Stop,
+    /// GameObject > Create: spawn a new object at the world origin.
+    CreateObject(CreateKind),
+}
+
+/// What the GameObject > Create menu spawns.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CreateKind {
+    /// A named transform-only entity (hierarchy placeholder).
+    Empty,
+    /// A tinted unit cube with a dynamic physics body.
+    Cube,
+    /// A 0.15-unit marker (lights, waypoints).
+    Marker,
+}
+
+impl CreateKind {
+    /// Dropdown/menu label.
+    pub fn label(self) -> &'static str {
+        match self {
+            CreateKind::Empty => "Empty",
+            CreateKind::Cube => "Cube",
+            CreateKind::Marker => "Marker",
+        }
+    }
+}
+
+/// One undoable operation, recorded by the shell's interactions and
+/// applied by the app via [`crate::commands::apply_undo`].
+#[allow(clippy::large_enum_variant)]
+///
+/// Honest v1.1 scope: transform edits, deletions and creations. Entity
+/// ids are session-scoped: a restored delete re-spawns with a NEW id,
+/// so redo (which would need id remapping) is deliberately not
+/// offered — documented in ADR-0036.
+#[derive(Debug, Clone, PartialEq)]
+pub enum UndoOp {
+    /// Restore the entity's local transform (viewport drags, inspector
+    /// edits land here).
+    Transform {
+        /// The edited entity.
+        entity: Entity,
+        /// The transform before the edit.
+        before: Transform,
+    },
+    /// A deleted entity's full authored snapshot (re-spawned on undo;
+    /// the new entity id replaces the dead one in the selection).
+    Delete {
+        /// The captured state (name/hierarchy/transform/mesh/body/script).
+        snapshot: crate::playmode::EntitySnapshot,
+    },
+    /// A created entity (despawned on undo).
+    Create {
+        /// The spawned entity.
+        entity: Entity,
+    },
 }
 
 #[cfg(test)]
