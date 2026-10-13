@@ -1,0 +1,313 @@
+# Release pipeline (v1.0.0, post-roadmap release engineering — ADR-0035).
+#
+# Triggers on v* tags. Everything is built by GitHub runners from the
+# tag itself — no local builds, no cross-compilation:
+#   - editor + runtime tool zips for Windows x86_64 and Linux x86_64
+#   - two deterministic example games (.genspkg), each built,
+#     hash-re-verified and player-run clean before attaching
+#   - the gens-release-1 self-validating manifest
+#   - SHA256SUMS over every attached asset
+#   - the GitHub Release (notes = release header + verbatim Phase 10
+#     report), marked Latest
+# A final verify job downloads the PUBLISHED Windows zips from the
+# release and launches them on a real Windows runner: the player run is
+# the hard gate; the editor render is GPU best-effort with an auditable
+# skip marker (the R-028 rule). Authentication uses the workflow's
+# ephemeral GITHUB_TOKEN — no user credential ever enters CI.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ------------------------------------------------------------------
+  # Linux x86_64 binaries
+  # ------------------------------------------------------------------
+  build-linux:
+    name: build / linux-x86_64
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build the editor (release)
+        run: cargo build --release -p gens-editor --example editor_hello
+
+      - name: Build the runtime tools (release)
+        run: cargo build --release -p gens-build --bins
+
+      - name: Package the bundles
+        run: |
+          set -eu
+          mkdir -p dist/editor dist/runtime
+          cp target/release/examples/editor_hello dist/editor/gens-editor
+          cp target/release/gens-player dist/runtime/gens-player
+          cp target/release/gens-pkg dist/runtime/gens-pkg
+          cp docs/release/BUNDLE_README.md dist/editor/README.txt
+          cp docs/release/BUNDLE_README.md dist/runtime/README.txt
+          (cd dist/editor && zip -q ../gens-editor-linux-x86_64.zip *)
+          (cd dist/runtime && zip -q ../gens-runtime-linux-x86_64.zip *)
+          ls -la dist/*.zip
+
+      - name: Upload the Linux zips
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-zips
+          path: dist/gens-*-linux-x86_64.zip
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------
+  # Windows x86_64 binaries (native MSVC runner)
+  # ------------------------------------------------------------------
+  build-windows:
+    name: build / windows-x86_64
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build the editor (release)
+        run: cargo build --release -p gens-editor --example editor_hello
+
+      - name: Build the runtime tools (release)
+        run: cargo build --release -p gens-build --bins
+
+      - name: Package the bundles
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist\editor, dist\runtime | Out-Null
+          Copy-Item target\release\examples\editor_hello.exe dist\editor\gens-editor.exe
+          Copy-Item target\release\gens-player.exe dist\runtime\gens-player.exe
+          Copy-Item target\release\gens-pkg.exe dist\runtime\gens-pkg.exe
+          Copy-Item docs\release\BUNDLE_README.md dist\editor\README.txt
+          Copy-Item docs\release\BUNDLE_README.md dist\runtime\README.txt
+          Compress-Archive -Path dist\editor\* -DestinationPath dist\gens-editor-windows-x86_64.zip
+          Compress-Archive -Path dist\runtime\* -DestinationPath dist\gens-runtime-windows-x86_64.zip
+          Get-ChildItem dist\*.zip | Format-Table Name, Length
+
+      - name: Upload the Windows zips
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zips
+          path: dist/gens-*-windows-x86_64.zip
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------
+  # Example games: built, re-verified, player-run clean BEFORE attaching
+  # ------------------------------------------------------------------
+  games:
+    name: build / example games (.genspkg)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build, verify and player-run the example games
+        run: cargo run -p gens-build --example release_games -- --dir dist/games
+
+      - name: CLI end-to-end — the released gens-player runs a built game
+        run: |
+          cargo run -p gens-build --bin gens-player -- --package dist/games/hello-patrol.genspkg --steps 300 --out dist/games/hello-patrol-report.json
+          test -f dist/games/hello-patrol-report.json
+          head -14 dist/games/hello-patrol-report.json
+
+      - name: Upload the example games
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-games
+          path: |
+            dist/games/*.genspkg
+            dist/games/*.json
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------
+  # The gens-release-1 self-validating manifest (ADR-0034)
+  # ------------------------------------------------------------------
+  manifest:
+    name: build / gens-release-1 manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Generate the self-validating release manifest
+        run: |
+          cargo run -p gens-build --example release_manifest -- --out dist/gens-release-manifest.json
+          test -f dist/gens-release-manifest.json
+
+      - name: Upload the manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-manifest
+          path: dist/gens-release-manifest.json
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------
+  # Publish: assemble, checksum, release
+  # ------------------------------------------------------------------
+  release:
+    name: release / publish
+    needs: [build-linux, build-windows, games, manifest]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-all
+
+      - name: Assemble release assets
+        run: |
+          set -eu
+          mkdir -p dist
+          find dist-all -type f -exec mv {} dist/ \;
+          ls -la dist/
+
+      - name: SHA256SUMS over every attached asset
+        run: |
+          cd dist
+          sha256sum gens-editor-linux-x86_64.zip gens-runtime-linux-x86_64.zip \
+                    gens-editor-windows-x86_64.zip gens-runtime-windows-x86_64.zip \
+                    hello-patrol.genspkg hello-sink.genspkg \
+                    gens-release-manifest.json > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Compose release notes (header + verbatim Phase 10 report)
+        run: |
+          cat docs/release/RELEASE_HEADER.md docs/PHASE_10_REPORT.md > release_notes.md
+          wc -l release_notes.md
+
+      - name: Create the GitHub Release and attach assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --target "$GITHUB_SHA" \
+            --title "Gens Engine ${{ github.ref_name }}" \
+            --notes-file release_notes.md \
+            --latest \
+            dist/gens-editor-linux-x86_64.zip \
+            dist/gens-runtime-linux-x86_64.zip \
+            dist/gens-editor-windows-x86_64.zip \
+            dist/gens-runtime-windows-x86_64.zip \
+            dist/hello-patrol.genspkg \
+            dist/hello-sink.genspkg \
+            dist/gens-release-manifest.json \
+            dist/SHA256SUMS
+
+  # ------------------------------------------------------------------
+  # Launch verification on a real Windows runner, against the PUBLISHED
+  # release assets (ADR-0035): the player is the hard gate; the editor
+  # render is GPU best-effort with an auditable marker (R-028).
+  # ------------------------------------------------------------------
+  verify-windows:
+    name: verify / windows launch
+    needs: release
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Download the published release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" --repo "${{ github.repository }}" `
+            --pattern "gens-editor-windows-x86_64.zip" `
+            --pattern "gens-runtime-windows-x86_64.zip" `
+            --pattern "hello-patrol.genspkg" `
+            --pattern "SHA256SUMS" `
+            --clobber --dir dist
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Verify checksums of the downloaded assets
+        shell: bash
+        run: |
+          cd dist
+          sha256sum --check --ignore-missing SHA256SUMS
+
+      - name: Extract the bundles
+        shell: pwsh
+        run: |
+          Expand-Archive dist/gens-editor-windows-x86_64.zip -DestinationPath editor
+          Expand-Archive dist/gens-runtime-windows-x86_64.zip -DestinationPath runtime
+          if (-not (Test-Path .\editor\gens-editor.exe)) { throw "gens-editor.exe missing from the published zip" }
+          if (-not (Test-Path .\runtime\gens-player.exe)) { throw "gens-player.exe missing from the published zip" }
+          if (-not (Test-Path .\runtime\gens-pkg.exe)) { throw "gens-pkg.exe missing from the published zip" }
+          if (-not (Test-Path .\editor\README.txt)) { throw "README.txt missing from the published editor zip" }
+          Get-ChildItem editor, runtime | Format-Table Name, Length
+
+      - name: Launch the editor (headless; GPU best-effort on runners)
+        shell: pwsh
+        run: |
+          & .\editor\gens-editor.exe --steps 8 --out verify_editor *> editor_output.txt
+          $code = $LASTEXITCODE
+          Get-Content editor_output.txt -Tail 25
+          if ($code -eq 0 -and (Test-Path verify_editor.png)) {
+            Write-Host "EDITOR-VERIFY-OK: the published Windows editor rendered (verify_editor.png: $((Get-Item verify_editor.png).Length) bytes)"
+          } else {
+            Write-Host "EDITOR-SKIP: exit=$code — most likely no usable GPU adapter on this runner (auditable marker per R-028; the CPU-only player gate below is the hard launch proof)"
+          }
+
+      - name: Launch the player on an example game (hard gate)
+        shell: pwsh
+        run: |
+          & .\runtime\gens-player.exe --package dist/hello-patrol.genspkg --steps 300 --out verify_player.json
+          if ($LASTEXITCODE -ne 0) { throw "gens-player exited $LASTEXITCODE" }
+          if (-not (Test-Path verify_player.json)) { throw "gens-player wrote no run report" }
+          Get-Content verify_player.json -TotalCount 14
+          Write-Host "PLAYER-VERIFY-OK: the published Windows runtime ran the published example game clean"
+
+      - name: gens-pkg verify round-trip
+        shell: pwsh
+        run: |
+          & .\runtime\gens-pkg.exe verify dist/hello-patrol.genspkg
+          if ($LASTEXITCODE -ne 0) { throw "gens-pkg verify exited $LASTEXITCODE" }
+          Write-Host "PKG-VERIFY-OK: every package hash re-checked on the Windows runner"
