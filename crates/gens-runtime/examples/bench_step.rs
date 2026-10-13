@@ -14,22 +14,39 @@
 //! - `--warmup` unrecorded samples first,
 //! - `--samples` recorded samples; stats over the sample durations.
 //!
+//! Phase 10 grows the scenario set so the newer pillars are *measured*,
+//! not just proven (the Phase 9 handoff ask): `worldgen_stream_r2`
+//! samples differential chunk streaming (plans + generation + meshing)
+//! and `cinematic_camera_hero` samples the director composition
+//! (advance -> sample -> validate -> write through the live ECS). Same
+//! sampling methodology, same environment disclosure, same advisory.
+//!
 //! ```text
 //! cargo run -p gens-runtime --example bench_step -- --samples 30 --out bench.json
 //! ```
 
+use gens_cinematics::{
+    CameraCut, Channel, CinematicPlayer, FloatKey, FloatTrack, Interpolation, LoopMode, QuatKey,
+    QuatTrack, Timeline, Vec3Key, Vec3Track,
+};
 use gens_core::anyhow;
 use gens_core::anyhow::Context;
 use gens_core::logging::{info, init};
 use gens_ecs::EngineSchedules;
 use gens_ecs::ecs::world::World;
+use gens_ecs::{Active, Name, Transform};
+use gens_math::{Quat, Vec3};
 use gens_physics::{
     BodySpec, ColliderShape, ColliderSpec, PhysicsBody, PhysicsResource, PhysicsWorld,
     sync_transforms_from_physics,
 };
+use gens_runtime::cinematic::{CinematicStage, advance_and_apply};
 use gens_scripting::{ScriptHost, run_scripts};
+use gens_worldgen::chunk::{WorldGen, WorldGenConfig};
+use gens_worldgen::streaming::ChunkStreamer;
 use serde::Serialize;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 
 /// Sample statistics in milliseconds (the gens-profiler quartile
@@ -166,6 +183,150 @@ fn run_scenario(bodies: usize, scripts: usize, steps: usize) -> u64 {
     checksum
 }
 
+/// One deterministic worldgen streaming step: the focus alternates
+/// between two chunk coords two Chebyshev radii apart every 10 steps,
+/// so both load and unload traffic churn for the whole run.
+fn run_worldgen_scenario(steps: usize) -> u64 {
+    let generator = WorldGen::from_config(WorldGenConfig {
+        seed: 0x9E37_79B9_7F4A_7C15,
+        samples_per_chunk: 16,
+        cell_size: 1.0,
+        frequency: 0.06,
+        octaves: 4,
+        lacunarity: 2.0,
+        gain: 0.5,
+        density_threshold: 0.55,
+    })
+    .expect("bench generator config is valid");
+    let mut streamer = ChunkStreamer::new(2);
+    let mut checksum: u64 = 0;
+    for step in 0..steps {
+        // 2 chunks apart at cell 1.0 × 16 samples = 32 world units:
+        // radius-2 discs at the two foci overlap, so the differential
+        // plan moves ~9 chunks per flip — real generation traffic.
+        let fx = if (step / 10) % 2 == 0 { 0.0 } else { 32.0 };
+        let plan = streamer.update(generator.coord_of(fx, 0.0));
+        for coord in &plan.load {
+            let content = generator.generate(*coord).expect("bench chunk generation");
+            checksum = checksum.wrapping_add(content.mesh.hash);
+        }
+        for coord in &plan.unload {
+            checksum =
+                checksum.wrapping_add((coord.x as i64 as u64) ^ ((coord.z as i64 as u64) << 32));
+        }
+    }
+    checksum
+}
+
+/// The director composition through the live ECS: advance → sample →
+/// validate → write per fixed step, then a deterministic readback fold.
+/// Every key value is an f32 literal (the platform-independence rule).
+fn run_cinematic_scenario(steps: usize) -> u64 {
+    let timeline = Arc::new(
+        Timeline::builder(2.0)
+            .camera(CameraCut {
+                target: "camera".to_string(),
+                hard_cut: true,
+                blend_in: 0.0,
+            })
+            .float_track(
+                "camera",
+                Channel::Fov,
+                FloatTrack::new(
+                    vec![
+                        FloatKey {
+                            time: 0.0,
+                            value: 60.0,
+                        },
+                        FloatKey {
+                            time: 2.0,
+                            value: 45.0,
+                        },
+                    ],
+                    Interpolation::Smoothstep,
+                )
+                .expect("bench fov track"),
+            )
+            .expect("bench fov binding")
+            .vec3_track(
+                "hero",
+                Channel::Translation,
+                Vec3Track::new(
+                    vec![
+                        Vec3Key {
+                            time: 0.0,
+                            value: Vec3::new(0.0, 1.0, 0.0),
+                        },
+                        Vec3Key {
+                            time: 2.0,
+                            value: Vec3::new(4.0, 1.0, 0.0),
+                        },
+                    ],
+                    Interpolation::Linear,
+                )
+                .expect("bench translation track"),
+            )
+            .expect("bench translation binding")
+            .quat_track(
+                "hero",
+                Channel::Rotation,
+                QuatTrack::new(
+                    vec![
+                        QuatKey {
+                            time: 0.0,
+                            value: Quat::from_xyzw(0.0, 0.0, 0.0, 1.0),
+                        },
+                        QuatKey {
+                            time: 2.0,
+                            value: Quat::from_xyzw(0.0, 0.707_106_77, 0.0, 0.707_106_77),
+                        },
+                    ],
+                    Interpolation::Linear,
+                )
+                .expect("bench rotation track"),
+            )
+            .expect("bench rotation binding")
+            .event(1.0, "bench_event")
+            .expect("bench event")
+            .build()
+            .expect("bench timeline builds"),
+    );
+
+    let mut world = World::new();
+    world.spawn((Name::new("Hero"), Transform::IDENTITY, Active));
+    let camera = world
+        .spawn((Name::new("Camera"), Transform::IDENTITY, Active))
+        .id();
+    // Name-query lookup (iter_entities order is NOT deterministic).
+    let hero = {
+        let mut q = world.query::<(&Name, gens_ecs::ecs::entity::Entity)>();
+        q.iter(&world)
+            .find(|(n, _)| n.0 == "Hero")
+            .map(|(_, e)| e)
+            .expect("hero exists")
+    };
+    let mut player = CinematicPlayer::new(timeline);
+    player.set_loop_mode(LoopMode::Loop);
+    let mut stage = CinematicStage::new(
+        player,
+        [("hero".to_string(), hero), ("camera".to_string(), camera)],
+    );
+    stage.player.play();
+
+    let dt = 1.0 / 60.0;
+    let mut checksum: u64 = 0;
+    for _ in 0..steps {
+        let outcome =
+            advance_and_apply(&mut stage, &mut world, dt).expect("bench cinematic step applies");
+        checksum = checksum.wrapping_add(outcome.events.len() as u64);
+        let mut q = world.query::<(&Name, &Transform)>();
+        if let Some((_, transform)) = q.iter(&world).find(|(n, _)| n.0 == "Hero") {
+            checksum = checksum.wrapping_add(u64::from(transform.position.x.to_bits()));
+        }
+    }
+    checksum
+}
+
 fn stats_of(
     name: &str,
     entities: usize,
@@ -216,6 +377,52 @@ fn bench_scenario(
         durations.push(elapsed.as_secs_f64() * 1000.0);
     }
     stats_of(name, entities, steps_per_sample, warmup, &durations)
+}
+
+/// Samples the worldgen streaming scenario (same warmup/sample pattern
+/// as [`bench_scenario`]; the streamed composition is CPU-only by
+/// design, so no adapter check is needed).
+fn bench_worldgen(
+    name: &str,
+    steps_per_sample: usize,
+    warmup: usize,
+    samples: usize,
+) -> SampleStats {
+    for _ in 0..warmup {
+        let _ = run_worldgen_scenario(steps_per_sample);
+    }
+    let mut durations: Vec<f64> = Vec::with_capacity(samples);
+    for _ in 0..samples {
+        let start = Instant::now();
+        let checksum = run_worldgen_scenario(steps_per_sample);
+        let elapsed = start.elapsed();
+        assert!(checksum > 0, "scenario must do real work");
+        durations.push(elapsed.as_secs_f64() * 1000.0);
+    }
+    // entities semantics: peak desired-set size (radius 2 = 5×5 chunks).
+    stats_of(name, 25, steps_per_sample, warmup, &durations)
+}
+
+/// Samples the cinematic director scenario (same warmup/sample
+/// pattern; `advance_and_apply` runs through the live ECS world).
+fn bench_cinematic(
+    name: &str,
+    steps_per_sample: usize,
+    warmup: usize,
+    samples: usize,
+) -> SampleStats {
+    for _ in 0..warmup {
+        let _ = run_cinematic_scenario(steps_per_sample);
+    }
+    let mut durations: Vec<f64> = Vec::with_capacity(samples);
+    for _ in 0..samples {
+        let start = Instant::now();
+        let checksum = run_cinematic_scenario(steps_per_sample);
+        let elapsed = start.elapsed();
+        assert!(checksum > 0, "scenario must do real work");
+        durations.push(elapsed.as_secs_f64() * 1000.0);
+    }
+    stats_of(name, 2, steps_per_sample, warmup, &durations)
 }
 
 fn main() -> anyhow::Result<()> {
@@ -299,6 +506,8 @@ fn main() -> anyhow::Result<()> {
             warmup,
             samples,
         ),
+        bench_worldgen("worldgen_stream_r2", steps_per_sample, warmup, samples),
+        bench_cinematic("cinematic_camera_hero", steps_per_sample, warmup, samples),
     ];
 
     for b in &benches {
