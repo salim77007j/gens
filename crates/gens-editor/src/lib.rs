@@ -39,6 +39,7 @@ pub mod console;
 pub mod hierarchy;
 pub mod inspector;
 pub mod model;
+pub mod playmode;
 pub mod shell;
 pub mod telemetry;
 pub mod theme;
@@ -46,4 +47,5 @@ pub mod viewport;
 pub mod window;
 
 pub use model::{AuthoredBody, EditorCommand, MeshSlot, ShapeKind};
+pub use playmode::{EntitySnapshot, WorldSnapshot};
 pub use shell::{BottomTab, EditorShell, EditorState, FrameStats, ViewTab};
