@@ -30,3 +30,12 @@ Thumbs.db
 .env
 .env.*
 *.local
+
+# v1.1 interactive-editor smoke output (written at repo root by the
+# gens-editor smoke session on CI; summarized evidence IS committed
+# under docs/evidence/)
+/smoke_editor_window.png
+/smoke_editor_window.json
+/scene.gensscene
+/editor_window.png
+/editor_window.json

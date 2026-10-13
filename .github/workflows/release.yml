@@ -1,19 +1,23 @@
-# Release pipeline (v1.0.0, post-roadmap release engineering — ADR-0035).
+# Release pipeline (v1.1 — the interactive editor, ADR-0036).
 #
 # Triggers on v* tags. Everything is built by GitHub runners from the
 # tag itself — no local builds, no cross-compilation:
-#   - editor + runtime tool zips for Windows x86_64 and Linux x86_64
+#   - the INTERACTIVE gens-editor window binary + runtime tool zips for
+#     Windows x86_64, Linux x86_64 and macOS aarch64
 #   - two deterministic example games (.genspkg), each built,
 #     hash-re-verified and player-run clean before attaching
 #   - the gens-release-1 self-validating manifest
 #   - SHA256SUMS over every attached asset
-#   - the GitHub Release (notes = release header + verbatim Phase 10
-#     report), marked Latest
-# A final verify job downloads the PUBLISHED Windows zips from the
-# release and launches them on a real Windows runner: the player run is
-# the hard gate; the editor render is GPU best-effort with an auditable
-# skip marker (the R-028 rule). Authentication uses the workflow's
-# ephemeral GITHUB_TOKEN — no user credential ever enters CI.
+#   - the GitHub Release (notes = docs/RELEASE_V1_1_NOTES.md), marked
+#     Latest
+# Final verification jobs download the PUBLISHED zips and launch the
+# window binary on real runners: the Linux (xvfb) and macOS (Metal)
+# window smokes are HARD gates — a real OS window must open, present
+# frames, and pass the scripted play/pause/stop/Ctrl+S session; the
+# Windows run follows the GPU best-effort convention with an auditable
+# skip marker (R-028), while the player run stays the hard launch proof
+# there. Authentication uses the workflow's ephemeral GITHUB_TOKEN — no
+# user credential ever enters CI.
 
 name: Release
 
@@ -50,8 +54,11 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Build the editor (release)
-        run: cargo build --release -p gens-editor --example editor_hello
+      - name: Install the window smoke's display server
+        run: sudo apt-get update -y && sudo apt-get install -y xvfb libxkbcommon-x11-0
+
+      - name: Build the interactive editor + headless replay (release)
+        run: cargo build --release -p gens-editor --bins --example editor_hello
 
       - name: Build the runtime tools (release)
         run: cargo build --release -p gens-build --bins
@@ -60,7 +67,8 @@ jobs:
         run: |
           set -eu
           mkdir -p dist/editor dist/runtime
-          cp target/release/examples/editor_hello dist/editor/gens-editor
+          cp target/release/gens-editor dist/editor/gens-editor
+          cp target/release/examples/editor_hello dist/editor/gens-editor-headless-replay
           cp target/release/gens-player dist/runtime/gens-player
           cp target/release/gens-pkg dist/runtime/gens-pkg
           cp docs/release/BUNDLE_README.md dist/editor/README.txt
@@ -68,6 +76,26 @@ jobs:
           (cd dist/editor && zip -q ../gens-editor-linux-x86_64.zip *)
           (cd dist/runtime && zip -q ../gens-runtime-linux-x86_64.zip *)
           ls -la dist/*.zip
+
+      - name: Launch-verify the packaged editor (real window under xvfb)
+        run: |
+          set -eu
+          mkdir -p launch-check && cd launch-check
+          unzip -q ../dist/gens-editor-linux-x86_64.zip
+          ./gens-editor --smoke-frames 22 --width 1600 --height 900 \
+            --screenshot editor_window.png --json editor_window.json
+          python3 - <<'PY'
+          import json
+          evidence = json.load(open("editor_window.json"))
+          assert evidence["format"] == "gens-editor-smoke-1", evidence
+          assert evidence["error"] is None, evidence
+          for key in ("play_button_clicked", "play_started_simulation", "pause_worked",
+                      "stop_restored_edit_mode", "ctrl_s_saved_scene"):
+              assert evidence["interactions"][key] is True, (key, evidence)
+          print("packaged editor window verdicts:", json.dumps(evidence["interactions"]))
+          PY
+          test -f editor_window.png
+          echo "packaged Linux editor rendered $(wc -c < editor_window.png) bytes in a real xvfb window"
 
       - name: Upload the Linux zips
         uses: actions/upload-artifact@v4
@@ -93,8 +121,8 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Build the editor (release)
-        run: cargo build --release -p gens-editor --example editor_hello
+      - name: Build the interactive editor + headless replay (release)
+        run: cargo build --release -p gens-editor --bins --example editor_hello
 
       - name: Build the runtime tools (release)
         run: cargo build --release -p gens-build --bins
@@ -103,7 +131,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist\editor, dist\runtime | Out-Null
-          Copy-Item target\release\examples\editor_hello.exe dist\editor\gens-editor.exe
+          Copy-Item target\release\gens-editor.exe dist\editor\gens-editor.exe
+          Copy-Item target\release\examples\editor_hello.exe dist\editor\gens-editor-headless-replay.exe
           Copy-Item target\release\gens-player.exe dist\runtime\gens-player.exe
           Copy-Item target\release\gens-pkg.exe dist\runtime\gens-pkg.exe
           Copy-Item docs\release\BUNDLE_README.md dist\editor\README.txt
@@ -112,11 +141,90 @@ jobs:
           Compress-Archive -Path dist\runtime\* -DestinationPath dist\gens-runtime-windows-x86_64.zip
           Get-ChildItem dist\*.zip | Format-Table Name, Length
 
+      - name: Launch-verify the packaged editor (real window on the runner desktop)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path launch-check | Out-Null
+          Expand-Archive dist\gens-editor-windows-x86_64.zip -DestinationPath launch-check
+          & .\launch-check\gens-editor.exe --smoke-frames 22 --width 1600 --height 900 --screenshot editor_window.png --json editor_window.json *> editor_smoke.txt
+          $code = $LASTEXITCODE
+          Get-Content editor_smoke.txt -Tail 20
+          if ($code -ne 0) {
+            Write-Host "EDITOR-WINDOW-SKIP: exit=$code — no usable GPU adapter or desktop on this runner (auditable marker, R-028/R-036 convention; the verify-windows job re-attempts against the published zip)"
+          } else {
+            if (-not (Test-Path editor_window.png)) { throw "window smoke wrote no screenshot" }
+            Write-Host "packaged Windows editor opened a real window and presented $((Get-Item editor_window.png).Length) bytes of rendered frames"
+          }
+
       - name: Upload the Windows zips
         uses: actions/upload-artifact@v4
         with:
           name: windows-zips
           path: dist/gens-*-windows-x86_64.zip
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------
+  # macOS aarch64 binaries (Apple Silicon runner, real Metal device)
+  # ------------------------------------------------------------------
+  build-macos:
+    name: build / macos-aarch64
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build the interactive editor + headless replay (release)
+        run: cargo build --release -p gens-editor --bins --example editor_hello
+
+      - name: Build the runtime tools (release)
+        run: cargo build --release -p gens-build --bins
+
+      - name: Package the bundles
+        run: |
+          set -eu
+          mkdir -p dist/editor dist/runtime
+          cp target/release/gens-editor dist/editor/gens-editor
+          cp target/release/examples/editor_hello dist/editor/gens-editor-headless-replay
+          cp target/release/gens-player dist/runtime/gens-player
+          cp target/release/gens-pkg dist/runtime/gens-pkg
+          cp docs/release/BUNDLE_README.md dist/editor/README.txt
+          cp docs/release/BUNDLE_README.md dist/runtime/README.txt
+          (cd dist/editor && zip -q ../gens-editor-macos-aarch64.zip *)
+          (cd dist/runtime && zip -q ../gens-runtime-macos-aarch64.zip *)
+          ls -la dist/*.zip
+
+      - name: Launch-verify the packaged editor (real window, real Metal)
+        run: |
+          set -eu
+          mkdir -p launch-check && cd launch-check
+          unzip -q ../dist/gens-editor-macos-aarch64.zip
+          ./gens-editor --smoke-frames 22 --width 1600 --height 900 \
+            --screenshot editor_window.png --json editor_window.json
+          python3 - <<'PY'
+          import json
+          evidence = json.load(open("editor_window.json"))
+          assert evidence["format"] == "gens-editor-smoke-1", evidence
+          assert evidence["error"] is None, evidence
+          for key in ("play_button_clicked", "play_started_simulation", "pause_worked",
+                      "stop_restored_edit_mode", "ctrl_s_saved_scene"):
+              assert evidence["interactions"][key] is True, (key, evidence)
+          print("packaged editor window verdicts:", json.dumps(evidence["interactions"]))
+          PY
+          test -f editor_window.png
+          echo "packaged macOS editor rendered $(wc -c < editor_window.png) bytes in a real window on Metal"
+
+      - name: Upload the macOS zips
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-zips
+          path: dist/gens-*-macos-aarch64.zip
           if-no-files-found: error
 
   # ------------------------------------------------------------------
@@ -189,7 +297,7 @@ jobs:
   # ------------------------------------------------------------------
   release:
     name: release / publish
-    needs: [build-linux, build-windows, games, manifest]
+    needs: [build-linux, build-windows, build-macos, games, manifest]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -215,13 +323,14 @@ jobs:
           cd dist
           sha256sum gens-editor-linux-x86_64.zip gens-runtime-linux-x86_64.zip \
                     gens-editor-windows-x86_64.zip gens-runtime-windows-x86_64.zip \
+                    gens-editor-macos-aarch64.zip gens-runtime-macos-aarch64.zip \
                     hello-patrol.genspkg hello-sink.genspkg \
                     gens-release-manifest.json > SHA256SUMS
           cat SHA256SUMS
 
-      - name: Compose release notes (header + verbatim Phase 10 report)
+      - name: Compose release notes (the v1.1 interactive-editor report)
         run: |
-          cat docs/release/RELEASE_HEADER.md docs/PHASE_10_REPORT.md > release_notes.md
+          cat docs/RELEASE_V1_1_NOTES.md > release_notes.md
           wc -l release_notes.md
 
       - name: Create the GitHub Release and attach assets
@@ -230,25 +339,145 @@ jobs:
         run: |
           gh release create "${{ github.ref_name }}" \
             --target "$GITHUB_SHA" \
-            --title "Gens Engine ${{ github.ref_name }}" \
+            --title "Gens Engine ${{ github.ref_name }} — The Interactive Editor" \
             --notes-file release_notes.md \
             --latest \
             dist/gens-editor-linux-x86_64.zip \
             dist/gens-runtime-linux-x86_64.zip \
             dist/gens-editor-windows-x86_64.zip \
             dist/gens-runtime-windows-x86_64.zip \
+            dist/gens-editor-macos-aarch64.zip \
+            dist/gens-runtime-macos-aarch64.zip \
             dist/hello-patrol.genspkg \
             dist/hello-sink.genspkg \
             dist/gens-release-manifest.json \
             dist/SHA256SUMS
 
   # ------------------------------------------------------------------
-  # Launch verification on a real Windows runner, against the PUBLISHED
-  # release assets (ADR-0035): the player is the hard gate; the editor
-  # render is GPU best-effort with an auditable marker (R-028).
+  # Launch verification against the PUBLISHED release assets: Linux
+  # (xvfb) and macOS (Metal) window smokes are HARD gates; Windows is
+  # best-effort with an auditable marker (R-028) — its hard launch
+  # proof stays the player.
   # ------------------------------------------------------------------
+  verify-linux:
+    name: verify / linux launch (published zips)
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Install the display server
+        run: sudo apt-get update -y && sudo apt-get install -y xvfb libxkbcommon-x11-0
+
+      - name: Download the published release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" --repo "${{ github.repository }}" \
+            --pattern "gens-editor-linux-x86_64.zip" \
+            --pattern "gens-runtime-linux-x86_64.zip" \
+            --pattern "hello-patrol.genspkg" \
+            --pattern "SHA256SUMS" \
+            --clobber --dir dist
+          ls -la dist
+
+      - name: Verify checksums of the downloaded assets
+        run: |
+          cd dist
+          sha256sum --check --ignore-missing SHA256SUMS
+
+      - name: Extract the bundles
+        run: |
+          unzip -q dist/gens-editor-linux-x86_64.zip -d editor
+          unzip -q dist/gens-runtime-linux-x86_64.zip -d runtime
+          test -f editor/gens-editor
+          test -f runtime/gens-player
+          test -f editor/README.txt
+
+      - name: Launch the interactive editor (real window under xvfb — hard gate)
+        run: |
+          xvfb-run -a ./editor/gens-editor --smoke-frames 22 --width 1600 --height 900 \
+            --screenshot verify_editor_window.png --json verify_editor_window.json
+          python3 - <<'PY'
+          import json
+          evidence = json.load(open("verify_editor_window.json"))
+          assert evidence["format"] == "gens-editor-smoke-1", evidence
+          assert evidence["error"] is None, evidence
+          for key in ("play_button_clicked", "play_started_simulation", "pause_worked",
+                      "stop_restored_edit_mode", "ctrl_s_saved_scene"):
+              assert evidence["interactions"][key] is True, (key, evidence)
+          print("EDITOR-WINDOW-VERIFY-OK:", json.dumps(evidence["interactions"]))
+          PY
+          test -f verify_editor_window.png
+          echo "the PUBLISHED Linux editor opened a real window and presented $(wc -c < verify_editor_window.png) bytes"
+
+      - name: Launch the player on an example game (hard gate)
+        run: |
+          ./runtime/gens-player --package dist/hello-patrol.genspkg --steps 300 --out verify_player.json
+          test -f verify_player.json
+          head -14 verify_player.json
+          echo "PLAYER-VERIFY-OK: the published Linux runtime ran the published example game clean"
+
+  verify-macos:
+    name: verify / macos launch (published zips)
+    needs: release
+    runs-on: macos-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Download the published release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" --repo "${{ github.repository }}" \
+            --pattern "gens-editor-macos-aarch64.zip" \
+            --pattern "gens-runtime-macos-aarch64.zip" \
+            --pattern "hello-patrol.genspkg" \
+            --pattern "SHA256SUMS" \
+            --clobber --dir dist
+          ls -la dist
+
+      - name: Verify checksums of the downloaded assets
+        run: |
+          cd dist
+          shasum -a 256 --check --ignore-missing SHA256SUMS
+
+      - name: Extract the bundles
+        run: |
+          unzip -q dist/gens-editor-macos-aarch64.zip -d editor
+          unzip -q dist/gens-runtime-macos-aarch64.zip -d runtime
+          test -f editor/gens-editor
+          test -f runtime/gens-player
+          test -f editor/README.txt
+
+      - name: Launch the interactive editor (real window on Metal — hard gate)
+        run: |
+          ./editor/gens-editor --smoke-frames 22 --width 1600 --height 900 \
+            --screenshot verify_editor_window.png --json verify_editor_window.json
+          python3 - <<'PY'
+          import json
+          evidence = json.load(open("verify_editor_window.json"))
+          assert evidence["format"] == "gens-editor-smoke-1", evidence
+          assert evidence["error"] is None, evidence
+          for key in ("play_button_clicked", "play_started_simulation", "pause_worked",
+                      "stop_restored_edit_mode", "ctrl_s_saved_scene"):
+              assert evidence["interactions"][key] is True, (key, evidence)
+          print("EDITOR-WINDOW-VERIFY-OK:", json.dumps(evidence["interactions"]))
+          PY
+          test -f verify_editor_window.png
+          echo "the PUBLISHED macOS editor opened a real window and presented $(wc -c < verify_editor_window.png) bytes on Metal"
+
+      - name: Launch the player on an example game (hard gate)
+        run: |
+          ./runtime/gens-player --package dist/hello-patrol.genspkg --steps 300 --out verify_player.json
+          test -f verify_player.json
+          head -14 verify_player.json
+          echo "PLAYER-VERIFY-OK: the published macOS runtime ran the published example game clean"
+
   verify-windows:
-    name: verify / windows launch
+    name: verify / windows launch (published zips)
     needs: release
     runs-on: windows-latest
     timeout-minutes: 30
@@ -285,16 +514,16 @@ jobs:
           if (-not (Test-Path .\editor\README.txt)) { throw "README.txt missing from the published editor zip" }
           Get-ChildItem editor, runtime | Format-Table Name, Length
 
-      - name: Launch the editor (headless; GPU best-effort on runners)
+      - name: Launch the interactive editor (real window; GPU best-effort on runners)
         shell: pwsh
         run: |
-          & .\editor\gens-editor.exe --steps 8 --out verify_editor *> editor_output.txt
+          & .\editor\gens-editor.exe --smoke-frames 22 --width 1600 --height 900 --screenshot verify_editor_window.png --json verify_editor_window.json *> editor_output.txt
           $code = $LASTEXITCODE
           Get-Content editor_output.txt -Tail 25
-          if ($code -eq 0 -and (Test-Path verify_editor.png)) {
-            Write-Host "EDITOR-VERIFY-OK: the published Windows editor rendered (verify_editor.png: $((Get-Item verify_editor.png).Length) bytes)"
+          if ($code -eq 0 -and (Test-Path verify_editor_window.png)) {
+            Write-Host "EDITOR-WINDOW-VERIFY-OK: the published Windows editor opened a real window (verify_editor_window.png: $((Get-Item verify_editor_window.png).Length) bytes)"
           } else {
-            Write-Host "EDITOR-SKIP: exit=$code — most likely no usable GPU adapter on this runner (auditable marker per R-028; the CPU-only player gate below is the hard launch proof)"
+            Write-Host "EDITOR-WINDOW-SKIP: exit=$code — most likely no usable GPU adapter on this runner (auditable marker per R-028; the CPU-only player gate below is the hard launch proof)"
           }
 
       - name: Launch the player on an example game (hard gate)
