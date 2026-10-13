@@ -173,6 +173,7 @@ jobs:
 
       - name: Generate the self-validating release manifest
         run: |
+          mkdir -p dist
           cargo run -p gens-build --example release_manifest -- --out dist/gens-release-manifest.json
           test -f dist/gens-release-manifest.json
 
