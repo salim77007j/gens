@@ -44,7 +44,7 @@ use gens_editor::window::SurfaceTarget;
 use gens_editor::window::events as win_events;
 use gens_editor::{EditorShell, MeshSlot, PlayMode};
 use gens_physics::ecs::sync_transforms_from_physics;
-use gens_physics::{BodySpec, ColliderShape, ColliderSpec, PhysicsResource, PhysicsWorld};
+use gens_physics::{ColliderShape, PhysicsResource, PhysicsWorld};
 use gens_ui::{UiEvent, UiInput};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -764,13 +764,32 @@ fn build_scene() -> (gens_ecs::ecs::world::World, PhysicsWorld) {
             MeshSlot::quad([52, 60, 74, 255]),
         ),
     );
+    // EDITOR_REALITY_CHECK.md P0 #5 fix: the scene's bodies are created
+    // through the SAME authored description the Inspector edits
+    // (model.rs rule — what it shows is what simulation runs).
+    // v1.1.0 spawned raw `PhysicsBody` handles with no `AuthoredBody`,
+    // so the Inspector's Physics section could never render for any
+    // scene entity, and a Play->Stop round-trip (which captures the
+    // authored description) silently dropped every body.
+    let ship_authored = gens_editor::AuthoredBody {
+        kind: gens_physics::BodyKind::Fixed,
+        collider: ColliderShape::Cuboid(vec3(1.5, 0.4, 0.75)),
+        friction: 0.6,
+        ..gens_editor::AuthoredBody::default()
+    };
     let (ship_body, _) = physics.create_body(
-        BodySpec::fixed_at(vec3(0.0, 0.8, 0.0)),
-        ColliderSpec {
-            shape: ColliderShape::Cuboid(vec3(1.5, 0.4, 0.75)),
-            friction: 0.6,
-            ..Default::default()
-        },
+        gens_editor::playmode::body_spec_from_authored(&ship_authored, vec3(0.0, 0.8, 0.0)),
+        gens_editor::playmode::collider_spec_from_authored(&ship_authored),
+    );
+    let crate_authored = gens_editor::AuthoredBody {
+        kind: gens_physics::BodyKind::Dynamic,
+        collider: ColliderShape::Ball(0.45),
+        friction: 0.5,
+        ..gens_editor::AuthoredBody::default()
+    };
+    let (crate_body, _) = physics.create_body(
+        gens_editor::playmode::body_spec_from_authored(&crate_authored, vec3(1.0, 4.0, -1.0)),
+        gens_editor::playmode::collider_spec_from_authored(&crate_authored),
     );
     let ship = spawn(
         &mut world,
@@ -783,16 +802,9 @@ fn build_scene() -> (gens_ecs::ecs::world::World, PhysicsWorld) {
                 scale: vec3(3.0, 0.8, 1.5),
             },
             MeshSlot::cube([168, 178, 196, 255]),
+            ship_authored,
             gens_physics::PhysicsBody { handle: ship_body },
         ),
-    );
-    let (crate_body, _) = physics.create_body(
-        BodySpec::dynamic_at(vec3(1.0, 4.0, -1.0)),
-        ColliderSpec {
-            shape: ColliderShape::Ball(0.45),
-            friction: 0.5,
-            ..Default::default()
-        },
     );
     let crates = spawn(
         &mut world,
@@ -801,6 +813,7 @@ fn build_scene() -> (gens_ecs::ecs::world::World, PhysicsWorld) {
         (
             Transform::from_position(vec3(1.0, 4.0, -1.0)),
             MeshSlot::cube([185, 130, 70, 255]),
+            crate_authored,
             gens_physics::PhysicsBody { handle: crate_body },
         ),
     );
@@ -820,4 +833,56 @@ fn build_assets() -> AssetRegistry {
         PATROL_RHAI.as_bytes(),
     );
     registry
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The Inspector contract (model.rs): every entity carrying a live
+    /// `PhysicsBody` also carries the authored description the Physics
+    /// section edits. v1.1.0's scene violated this — the Physics
+    /// section could not render on ANY entity (reality-check P0 #5) —
+    /// and a Play->Stop round-trip dropped the bodies outright.
+    #[test]
+    fn every_live_body_in_the_scene_has_an_authored_description() {
+        let (world, _physics) = build_scene();
+        let mut live_bodies = 0;
+        for entity_ref in world.iter_entities() {
+            let entity = entity_ref.id();
+            if world.get::<gens_physics::PhysicsBody>(entity).is_some() {
+                live_bodies += 1;
+                assert!(
+                    world.get::<gens_editor::AuthoredBody>(entity).is_some(),
+                    "a live body without an authored description cannot be inspected or round-tripped"
+                );
+            }
+        }
+        assert_eq!(live_bodies, 2, "the scene seeds Spaceship + Crate bodies");
+    }
+
+    /// The Play->Stop capture path must round-trip every scene body:
+    /// capture must see the authored descriptions (the restore
+    /// re-creates live bodies from them).
+    #[test]
+    fn scene_bodies_survive_a_capture_round_trip() {
+        let (world, _physics) = build_scene();
+        let snapshot = gens_editor::playmode::capture(&world);
+        let bodies: Vec<_> = snapshot
+            .entities
+            .iter()
+            .filter_map(|e| e.body.as_ref())
+            .collect();
+        assert_eq!(
+            bodies.len(),
+            2,
+            "Spaceship + Crate authored bodies captured"
+        );
+        assert!(
+            bodies
+                .iter()
+                .any(|b| b.kind == gens_physics::BodyKind::Fixed),
+            "the Spaceship's fixed body is part of the captured state"
+        );
+    }
 }
