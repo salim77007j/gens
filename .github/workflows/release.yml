@@ -54,8 +54,13 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Install the window smoke's display server
-        run: sudo apt-get update -y && sudo apt-get install -y xvfb libxkbcommon-x11-0
+      - name: Install the window smoke's display server + software GPU
+        run: |
+          sudo apt-get update -y
+          # xvfb = the window system; lavapipe = the software Vulkan
+          # adapter the engine's wgpu path renders with (the same pair
+          # the CI gates job uses, ADR-0011).
+          sudo apt-get install -y xvfb libxkbcommon-x11-0 mesa-vulkan-drivers libvulkan1 vulkan-tools
 
       - name: Build the interactive editor + headless replay (release)
         run: cargo build --release -p gens-editor --bins --example editor_hello
@@ -369,8 +374,13 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Install the display server
-        run: sudo apt-get update -y && sudo apt-get install -y xvfb libxkbcommon-x11-0
+      - name: Install the display server + software GPU
+        run: |
+          sudo apt-get update -y
+          # Same pair as the build job and the CI gates: xvfb is the
+          # window system, lavapipe is the Vulkan adapter the editor
+          # renders with (ADR-0011).
+          sudo apt-get install -y xvfb libxkbcommon-x11-0 mesa-vulkan-drivers libvulkan1 vulkan-tools
 
       - name: Download the published release assets
         env:
