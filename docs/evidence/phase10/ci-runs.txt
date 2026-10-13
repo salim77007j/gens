@@ -10,3 +10,9 @@ Phase 10 CI run ledger (branch phase10-final-validation)
 Every push ran the full 3-OS matrix (fmt, clippy -D warnings, build, test,
 9 headless smokes, release manifest, size gates). Main merge run recorded
 in docs/evidence/phase10/ after the phase merge.
+
+Merge to main:
+#129  f892a8a  merge: phase 10  success  (gate/docs-integrity, ubuntu, macos, windows — all success)
+Tag phase10-complete pushed on f892a8a — the project's final anchor
+(roadmap rows 0-10 all Complete; no phase 11 exists, so no
+pre-phase11-safe tag; the pre-phase10-safe anchor guarded this phase).
