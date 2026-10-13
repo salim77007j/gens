@@ -191,6 +191,10 @@ pub struct EditorState {
     /// by the viewport panel, consumed by the app after the drag ends
     /// (the undo op is recorded there).
     pub viewport_drag: Option<ViewportDrag>,
+    /// Toolbar button rects captured from layout, by label — the same
+    /// replay seam as [`EditorState::row_rects`]: scripted input clicks
+    /// layout-captured rects, never hardcoded pixel guesses (P4-6).
+    pub toolbar_rects: BTreeMap<String, egui::Rect>,
     /// Live cinematic snapshot the Animator + Game View tabs read
     /// (None = no cinematic; the tabs render honest empty states).
     pub cinematic: Option<crate::cinema::CinematicPanelData>,
@@ -269,6 +273,23 @@ impl EditorShell {
     /// Propagates target re-creation failures.
     pub fn resize_window(&mut self, width: u32, height: u32) -> gens_core::anyhow::Result<()> {
         Ok(self.window_renderer.resize(width, height)?)
+    }
+
+    /// The window renderer's GPU context (the presentation path's
+    /// device/queue/adapter source).
+    #[must_use]
+    pub fn window_context(&self) -> &GpuContext {
+        self.window_renderer.context()
+    }
+
+    /// The window target's size in pixels (what the composed frame
+    /// must match for presentation).
+    #[must_use]
+    pub fn window_size(&self) -> [u32; 2] {
+        [
+            self.window_renderer.target().width(),
+            self.window_renderer.target().height(),
+        ]
     }
 
     /// One full editor pass: paints every panel over the window target
@@ -513,31 +534,32 @@ fn play_toolbar(ui: &mut egui::Ui, state: &mut EditorState) {
             ui.horizontal(|ui| {
                 let playing = state.play_mode == PlayMode::Playing;
                 let paused = state.play_mode == PlayMode::Paused;
-                if ui
-                    .add_enabled(!playing, egui::Button::new("Play"))
-                    .clicked()
-                {
+                let play = ui.add_enabled(!playing, egui::Button::new("Play"));
+                state.toolbar_rects.insert("Play".into(), play.rect);
+                if play.clicked() {
                     state.pending.push(EditorCommand::Play);
                 }
-                if ui
-                    .add_enabled(playing, egui::Button::new("Pause"))
-                    .clicked()
-                {
+                let pause = ui.add_enabled(playing, egui::Button::new("Pause"));
+                state.toolbar_rects.insert("Pause".into(), pause.rect);
+                if pause.clicked() {
                     state.pending.push(EditorCommand::Pause);
                 }
-                if ui
-                    .add_enabled(playing || paused, egui::Button::new("Stop"))
-                    .clicked()
-                {
+                let stop = ui.add_enabled(playing || paused, egui::Button::new("Stop"));
+                state.toolbar_rects.insert("Stop".into(), stop.rect);
+                if stop.clicked() {
                     state.pending.push(EditorCommand::Stop);
                 }
                 ui.separator();
-                if ui.button("Save").clicked() {
+                let save = ui.button("Save");
+                state.toolbar_rects.insert("Save".into(), save.rect);
+                if save.clicked() {
                     state
                         .pending
                         .push(EditorCommand::SaveScene(default_scene_path()));
                 }
-                if ui.button("Load").clicked() {
+                let load = ui.button("Load");
+                state.toolbar_rects.insert("Load".into(), load.rect);
+                if load.clicked() {
                     state
                         .pending
                         .push(EditorCommand::LoadScene(default_scene_path()));

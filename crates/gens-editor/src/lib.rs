@@ -46,6 +46,6 @@ pub mod theme;
 pub mod viewport;
 pub mod window;
 
-pub use model::{AuthoredBody, EditorCommand, MeshSlot, ShapeKind};
+pub use model::{AuthoredBody, CreateKind, EditorCommand, MeshSlot, ShapeKind, UndoOp};
 pub use playmode::{EntitySnapshot, WorldSnapshot};
-pub use shell::{BottomTab, EditorShell, EditorState, FrameStats, ViewTab};
+pub use shell::{BottomTab, EditorShell, EditorState, FrameStats, PlayMode, ViewTab};

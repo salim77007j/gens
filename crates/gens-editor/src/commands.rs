@@ -659,10 +659,7 @@ mod tests {
             UndoOp::Create { entity } => Some(*entity),
             _ => None,
         });
-        assert_eq!(
-            state.selected, created_entity,
-            "the new object is selected"
-        );
+        assert_eq!(state.selected, created_entity, "the new object is selected");
         let created = world
             .iter_entities()
             .find(|e| {

@@ -32,6 +32,8 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 wgpu.workspace = true
 winit.workspace = true
+# The interactive bin writes its smoke-mode screenshots itself.
+image.workspace = true
 
 [dev-dependencies]
 image.workspace = true
