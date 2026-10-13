@@ -5,6 +5,11 @@
 # Rust build artifacts
 /target
 
+# Out-of-tree plugin crates carry their own target/ dirs (the root
+# `/target` rule does not match them). Phase 9 accidentally committed
+# hello-plugin's (697 files, ~44 MB of binaries); P10-1 untracked them.
+plugins/*/target/
+
 # Build/export output used by tools and examples (later phases)
 /dist
 
