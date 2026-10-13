@@ -107,6 +107,172 @@ pub fn capture(world: &World) -> WorldSnapshot {
     }
 }
 
+/// Captures ONE entity's authored row — the targeted counterpart of
+/// [`capture`]'s per-entity loop (no content filter: undo payloads
+/// must be exact, even for sparse entities).
+#[must_use]
+pub fn capture_entity(world: &World, entity: Entity) -> EntitySnapshot {
+    let name = world.get::<Name>(entity).map(|n| n.0.clone());
+    let transform = world.get::<Transform>(entity).copied();
+    let active = world.get::<Active>(entity).is_some();
+    let mesh = world.get::<MeshSlot>(entity).copied();
+    let body = world.get::<AuthoredBody>(entity).copied();
+    let script = world.get::<ScriptComponent>(entity).cloned();
+    let parent = world
+        .get::<gens_ecs::ecs::hierarchy::ChildOf>(entity)
+        .and_then(|child_of| {
+            let parent = child_of.parent();
+            world.get::<Name>(parent).map(|n| n.0.clone())
+        });
+    EntitySnapshot {
+        name,
+        parent,
+        transform,
+        active,
+        mesh,
+        body,
+        script,
+    }
+}
+
+/// Captures `root` and every descendant, parents before children
+/// (breadth-first over `ChildOf` links).
+///
+/// bevy_ecs 0.20's `World::despawn` despawns the whole subtree
+/// (relationship-aware cascade — verified by probe), so a delete's
+/// undo payload must carry every doomed row, not just the selected
+/// one. Names are the re-attachment keys; the checker forbids
+/// duplicates, so each row resolves unambiguously.
+#[must_use]
+pub fn capture_subtree(world: &World, root: Entity) -> Vec<EntitySnapshot> {
+    let mut rows = vec![capture_entity(world, root)];
+    let mut frontier = vec![root];
+    while let Some(parent) = frontier.pop() {
+        let children: Vec<Entity> = world
+            .iter_entities()
+            .map(|r| r.id())
+            .filter(|id| {
+                world
+                    .get::<gens_ecs::ecs::hierarchy::ChildOf>(*id)
+                    .map(|c| c.parent() == parent)
+                    .unwrap_or(false)
+            })
+            .collect();
+        for child in children {
+            rows.push(capture_entity(world, child));
+            frontier.push(child);
+        }
+    }
+    rows
+}
+
+/// Respawns a captured subtree in the LIVE world (the undo-of-delete
+/// path — deliberately NOT the full-world [`restore`], which would
+/// despawn everything else).
+///
+/// Rows spawn in order; each row naming a parent re-attaches to it —
+/// first against the freshly spawned set (internal links), then
+/// against the live world (the common case: the deleted entity's
+/// parent still exists). A row whose named parent is nowhere is kept
+/// at the root and REPORTED in the returned `unresolved` list — the
+/// entity is never silently dropped (EDITOR_REALITY_CHECK.md P0 #4:
+/// the v1.1.0 undo lost the entity outright).
+///
+/// # Errors
+/// Returns an error when the rows carry duplicate names (the
+/// re-attachment key would be ambiguous — impossible from a live
+/// capture unless the world already violated the name invariant).
+pub fn respawn_subtree(
+    world: &mut World,
+    rows: &[EntitySnapshot],
+) -> Result<(Vec<Entity>, Vec<String>)> {
+    let mut seen = std::collections::BTreeSet::new();
+    for entity in rows {
+        if let Some(name) = &entity.name {
+            ensure!(
+                seen.insert(name.clone()),
+                "duplicate name '{name}' in delete payload — hierarchy keys would be ambiguous"
+            );
+        }
+    }
+
+    // Pass 1: spawn every row (links in pass 2, once all ids exist).
+    let mut spawned: Vec<(Entity, Option<String>)> = Vec::with_capacity(rows.len());
+    for entity in rows {
+        let transform = entity.transform.unwrap_or(Transform::IDENTITY);
+        let mut eb = world.spawn_empty();
+        if let Some(name) = &entity.name {
+            eb.insert(Name::new(name.clone()));
+        }
+        eb.insert(transform);
+        if entity.active {
+            eb.insert(Active);
+        }
+        if let Some(mesh) = entity.mesh {
+            eb.insert(mesh);
+        }
+        if let Some(script) = &entity.script {
+            eb.insert(script.clone());
+        }
+        let id = eb.id();
+        // `eb`'s last use is the `id()` read: NLL ends the world borrow
+        // here, before the resource access below.
+        if let Some(body) = entity.body {
+            // Same contract as `restore`: the authored description is
+            // re-created so what the inspector shows is what the
+            // simulation runs. Unlike `restore` (which rebuilds a fresh
+            // PhysicsWorld), the body is created into the LIVE resource
+            // — every other entity's body handle must stay valid.
+            let spec = body_spec_from_authored(&body, transform.position);
+            let collider = collider_spec_from_authored(&body);
+            match world.get_resource_mut::<PhysicsResource>() {
+                Some(mut resource) => {
+                    let (handle, _) = resource.world.create_body(spec, collider);
+                    world
+                        .entity_mut(id)
+                        .insert(body)
+                        .insert(PhysicsBody { handle });
+                }
+                None => {
+                    // No simulation backing (resource never inserted):
+                    // keep the authored component, skip the live handle.
+                    tracing::warn!("undo: no physics resource — body not re-created");
+                    world.entity_mut(id).insert(body);
+                }
+            }
+        }
+        spawned.push((id, entity.name.clone()));
+    }
+
+    // Pass 2: re-attach parents (internal links first, then the live
+    // world). Unresolved parents are reported, never silent.
+    let mut unresolved: Vec<String> = Vec::new();
+    for (row, (id, _name)) in rows.iter().zip(&spawned) {
+        let Some(parent_name) = &row.parent else {
+            continue;
+        };
+        let parent_entity = spawned
+            .iter()
+            .find(|(_, n)| n.as_deref() == Some(parent_name.as_str()))
+            .map(|(id, _)| *id)
+            .or_else(|| {
+                world.iter_entities().find_map(|r| {
+                    world
+                        .get::<Name>(r.id())
+                        .filter(|n| n.0 == *parent_name)
+                        .map(|_| r.id())
+                })
+            });
+        match parent_entity {
+            Some(parent) => attach_children(world, parent, &[*id]),
+            None => unresolved.push(parent_name.clone()),
+        }
+    }
+
+    let ids = spawned.into_iter().map(|(id, _)| id).collect();
+    Ok((ids, unresolved))
+}
+
 /// Restores a snapshot: despawns every snapshot-eligible entity in the
 /// live world, respawns the captured set (physics bodies re-created
 /// from their authored specs into a fresh world), and re-attaches the

@@ -184,11 +184,14 @@ pub enum UndoOp {
         /// The transform before the edit.
         before: Transform,
     },
-    /// A deleted entity's full authored snapshot (re-spawned on undo;
-    /// the new entity id replaces the dead one in the selection).
+    /// A deleted subtree's full authored snapshots (re-spawned on undo;
+    /// the root's new entity id replaces the dead one in the selection).
+    /// bevy_ecs's despawn cascades to descendants, so the payload is
+    /// every doomed row, parents first — a single row would silently
+    /// lose the children (EDITOR_REALITY_CHECK.md P0 #4).
     Delete {
-        /// The captured state (name/hierarchy/transform/mesh/body/script).
-        snapshot: crate::playmode::EntitySnapshot,
+        /// The captured rows (root first, then descendants).
+        snapshots: Vec<crate::playmode::EntitySnapshot>,
     },
     /// A created entity (despawned on undo).
     Create {

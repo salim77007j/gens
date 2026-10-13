@@ -290,10 +290,16 @@ fn ray_unit_quad(origin: Vec3, dir: Vec3) -> Option<f32> {
 
 /// Picks the nearest drawable entity under a pixel position.
 ///
-/// Hits are compared in WORLD-space distance: local t-values are
-/// converted by scaling with the local ray direction's length (the
-/// uniform-distance trick: t_world = t_local * |rd_local| / |rd_world|,
-/// and |rd_world| is 1 by construction).
+/// Hit comparison is exact by construction: the picking ray is
+/// `(origin, dir)` with `dir` unit-length, and a draw's local-space
+/// test returns `t` on the ray `local_origin + local_dir·t` where
+/// `local_dir = L⁻¹·dir` (`L` = the model's linear part). Mapping the
+/// hit back through the model gives `origin + L·local_dir·t =
+/// origin + dir·t` — the local parameter IS the world distance, so
+/// candidate hits compare as plain `t` values. (v1.1.0 multiplied by
+/// `|local_dir|` here, which deflated scaled-up draws — the 30×30
+/// ground quad outranked every object at any distance; the first real
+/// user session caught it, EDITOR_REALITY_CHECK.md P0 #1.)
 #[must_use]
 pub fn pick_at(
     world: &World,
@@ -307,11 +313,9 @@ pub fn pick_at(
     }
     let mut best: Option<(f32, Entity)> = None;
     for draw in collect_draws(world) {
-        let Some(t_local) = hit_distance(draw.shape, draw.model, origin, dir) else {
+        let Some(t_world) = hit_distance(draw.shape, draw.model, origin, dir) else {
             continue;
         };
-        let local_dir = draw.model.inverse().transform_vector3(dir);
-        let t_world = t_local * local_dir.length();
         if best.is_none() || t_world < best.expect("checked above").0 {
             best = Some((t_world, draw.entity));
         }
@@ -913,5 +917,111 @@ mod tests {
         let screen = project(near_pos, vp, pick_rect()).expect("near cube is visible");
         let picked = pick_at(&world, vp, pick_rect(), screen);
         assert_eq!(picked, Some(near), "the nearest hit must win");
+    }
+
+    /// The shipped demo scene's ground: a 30×30 quad, rotated -90°
+    /// around Y (the editor bin's exact local transform).
+    fn ground_transform() -> Transform {
+        Transform {
+            position: Vec3::ZERO,
+            rotation: gens_math::Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2),
+            scale: vec3(30.0, 30.0, 1.0),
+        }
+    }
+
+    #[test]
+    fn hit_distance_is_world_exact_for_scaled_cubes() {
+        // A scale-2 cube centered at z = -10: its near face sits at
+        // z = -9, so a ray marching -z hits at t = 9. (v1.1.0 reported
+        // 4.5 here — the |L⁻¹·dir| factor halved the distance — which
+        // is how scaled-up draws outranked everything behind them.)
+        let model =
+            Mat4::from_translation(vec3(0.0, 0.0, -10.0)) * Mat4::from_scale(Vec3::splat(2.0));
+        let t = hit_distance(ShapeKind::Cube, model, Vec3::ZERO, vec3(0.0, 0.0, -1.0));
+        assert!((t.unwrap() - 9.0).abs() < 1e-5, "face at t=9, got {t:?}");
+    }
+
+    #[test]
+    fn pick_prefers_the_cube_in_front_of_the_scaled_ground_plane() {
+        // EDITOR_REALITY_CHECK.md P0 #1, as a test: the shipped scene's
+        // 30×30 ground quad behind a unit cube. Every measured click on
+        // the cube selected Terrain because the quad's t was deflated
+        // by its scale. The cube's projected center must pick the cube.
+        let orbit = OrbitCam::default();
+        let cam = orbit.camera(800.0 / 600.0);
+        let vp = cam.view_proj();
+
+        let mut world = World::new();
+        world.spawn((
+            gens_ecs::Name::new("Terrain"),
+            ground_transform(),
+            MeshSlot::quad([52, 60, 74, 255]),
+        ));
+        let cube = world
+            .spawn((
+                gens_ecs::Name::new("Crate"),
+                Transform::from_position(vec3(1.0, 0.5, -1.0)),
+                MeshSlot::cube([185, 130, 70, 255]),
+            ))
+            .id();
+
+        let screen = project(vec3(1.0, 0.5, -1.0), vp, pick_rect())
+            .expect("the cube is in front of the camera");
+        let picked = pick_at(&world, vp, pick_rect(), screen);
+        assert_eq!(
+            picked,
+            Some(cube),
+            "clicking the cube must select the cube, not the ground behind it"
+        );
+
+        // The ground itself stays pickable where the cube is not.
+        let ground_screen = project(vec3(-6.0, 0.0, 2.0), vp, pick_rect())
+            .expect("a far ground point is still on screen");
+        let picked = pick_at(&world, vp, pick_rect(), ground_screen);
+        assert_neq_terrain_guard(picked, cube);
+    }
+
+    /// The ground-point pick must be SOME draw (the quad fills the
+    /// lower half of the view) — the assertion only fails when picking
+    /// is dead.
+    fn assert_neq_terrain_guard(picked: Option<Entity>, cube: Entity) {
+        assert!(picked.is_some(), "the ground plane must still pick");
+        assert_ne!(
+            picked,
+            Some(cube),
+            "a ground-only point must not pick the cube"
+        );
+    }
+
+    #[test]
+    fn pick_prefers_the_scaled_down_marker_over_the_ground_behind_it() {
+        // The scaled-DOWN half of the same bug: markers (0.15×) had
+        // their t inflated ~6.7×, so the ground behind them won.
+        let orbit = OrbitCam::default();
+        let cam = orbit.camera(800.0 / 600.0);
+        let vp = cam.view_proj();
+
+        let mut world = World::new();
+        world.spawn((
+            gens_ecs::Name::new("Terrain"),
+            ground_transform(),
+            MeshSlot::quad([52, 60, 74, 255]),
+        ));
+        let marker = world
+            .spawn((
+                gens_ecs::Name::new("DirectionalLight"),
+                Transform::from_position(vec3(0.0, 1.2, 0.0)),
+                MeshSlot::marker([255, 230, 120, 255]),
+            ))
+            .id();
+
+        let screen = project(vec3(0.0, 1.2, 0.0), vp, pick_rect())
+            .expect("the marker is in front of the camera");
+        let picked = pick_at(&world, vp, pick_rect(), screen);
+        assert_eq!(
+            picked,
+            Some(marker),
+            "the small marker must outrank the large ground plane behind it"
+        );
     }
 }
