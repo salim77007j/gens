@@ -24,7 +24,8 @@ use egui::{
 };
 
 use crate::frame::{
-    TextureFree, TextureRef, TextureUpload, UiEvent, UiFrame, UiInput, UiMesh, UiVertex,
+    TextureFree, TextureRef, TextureUpload, UiEvent, UiFrame, UiInput, UiKey, UiMesh, UiModifiers,
+    UiVertex,
 };
 
 /// A CPU mirror of one live egui texture.
@@ -207,6 +208,10 @@ impl UiContext {
 }
 
 /// Translates a neutral UI event into egui's event enum.
+///
+/// Returns `None` for events egui has no representation for (the
+/// `UiKey::Other` vocabulary entry — delivered so key state stays
+/// truthful, dropped here and counted by the pass).
 fn event_to_egui(event: &UiEvent) -> Option<egui::Event> {
     match *event {
         UiEvent::PointerMove { x, y } => Some(egui::Event::PointerMoved(Pos2::new(x, y))),
@@ -237,6 +242,123 @@ fn event_to_egui(event: &UiEvent) -> Option<egui::Event> {
             phase: egui::TouchPhase::Move,
             modifiers: egui::Modifiers::default(),
         }),
+        UiEvent::Key {
+            key,
+            pressed,
+            repeat,
+            modifiers,
+        } => {
+            let key = ui_key_to_egui(key)?;
+            Some(egui::Event::Key {
+                key,
+                physical_key: None,
+                pressed,
+                repeat,
+                modifiers: modifiers_to_egui(modifiers),
+            })
+        }
+        UiEvent::ModifiersChanged(modifiers) => {
+            Some(egui::Event::ModifiersChanged(modifiers_to_egui(modifiers)))
+        }
+    }
+}
+
+/// Maps the neutral key vocabulary onto egui's key set.
+///
+/// `Character` is matched uppercase (the vocabulary normalizes on
+/// arrival); letters, digits and the punctuation egui models are
+/// covered. `UiKey::Other` (and punctuation outside egui's set) map to
+/// `None` — the event is dropped, never mis-delivered as a wrong key.
+#[must_use]
+fn ui_key_to_egui(key: UiKey) -> Option<egui::Key> {
+    let letter = |c: char| egui_key_from_char(c);
+    Some(match key {
+        UiKey::Character(c) => letter(c)?,
+        UiKey::Enter => egui::Key::Enter,
+        UiKey::Tab => egui::Key::Tab,
+        UiKey::Backspace => egui::Key::Backspace,
+        UiKey::Delete => egui::Key::Delete,
+        UiKey::Escape => egui::Key::Escape,
+        UiKey::Space => egui::Key::Space,
+        UiKey::Insert => egui::Key::Insert,
+        UiKey::Home => egui::Key::Home,
+        UiKey::End => egui::Key::End,
+        UiKey::PageUp => egui::Key::PageUp,
+        UiKey::PageDown => egui::Key::PageDown,
+        UiKey::ArrowUp => egui::Key::ArrowUp,
+        UiKey::ArrowDown => egui::Key::ArrowDown,
+        UiKey::ArrowLeft => egui::Key::ArrowLeft,
+        UiKey::ArrowRight => egui::Key::ArrowRight,
+        UiKey::Other => return None,
+    })
+}
+
+/// Character-key mapping shared by the vocabulary translation.
+fn egui_key_from_char(c: char) -> Option<egui::Key> {
+    let c = c.to_ascii_uppercase();
+    let key = match c {
+        'A' => egui::Key::A,
+        'B' => egui::Key::B,
+        'C' => egui::Key::C,
+        'D' => egui::Key::D,
+        'E' => egui::Key::E,
+        'F' => egui::Key::F,
+        'G' => egui::Key::G,
+        'H' => egui::Key::H,
+        'I' => egui::Key::I,
+        'J' => egui::Key::J,
+        'K' => egui::Key::K,
+        'L' => egui::Key::L,
+        'M' => egui::Key::M,
+        'N' => egui::Key::N,
+        'O' => egui::Key::O,
+        'P' => egui::Key::P,
+        'Q' => egui::Key::Q,
+        'R' => egui::Key::R,
+        'S' => egui::Key::S,
+        'T' => egui::Key::T,
+        'U' => egui::Key::U,
+        'V' => egui::Key::V,
+        'W' => egui::Key::W,
+        'X' => egui::Key::X,
+        'Y' => egui::Key::Y,
+        'Z' => egui::Key::Z,
+        '0' => egui::Key::Num0,
+        '1' => egui::Key::Num1,
+        '2' => egui::Key::Num2,
+        '3' => egui::Key::Num3,
+        '4' => egui::Key::Num4,
+        '5' => egui::Key::Num5,
+        '6' => egui::Key::Num6,
+        '7' => egui::Key::Num7,
+        '8' => egui::Key::Num8,
+        '9' => egui::Key::Num9,
+        '-' => egui::Key::Minus,
+        '=' => egui::Key::Equals,
+        ',' => egui::Key::Comma,
+        '.' => egui::Key::Period,
+        '/' => egui::Key::Slash,
+        '\\' => egui::Key::Backslash,
+        ';' => egui::Key::Semicolon,
+        '\'' => egui::Key::Quote,
+        '[' => egui::Key::OpenBracket,
+        ']' => egui::Key::CloseBracket,
+        _ => return None,
+    };
+    Some(key)
+}
+
+/// Maps the neutral modifier snapshot onto egui's modifiers.
+#[must_use]
+fn modifiers_to_egui(m: UiModifiers) -> egui::Modifiers {
+    egui::Modifiers {
+        alt: m.alt,
+        ctrl: m.ctrl,
+        shift: m.shift,
+        mac_cmd: m.logo,
+        // egui's cross-platform shortcut convention: `command` mirrors
+        // ctrl on Windows/Linux and mac_cmd on Mac.
+        command: if m.logo { m.logo } else { m.ctrl },
     }
 }
 
@@ -514,5 +636,136 @@ mod tests {
             "got {}",
             scrolled.get()
         );
+    }
+
+    #[test]
+    fn ctrl_shortcuts_arrive_through_key_events() {
+        let mut ui = ctx();
+        let saves = Rc::new(Cell::new(0u32));
+        let seen = saves.clone();
+        let _ = ui.run(
+            UiInput {
+                time_seconds: 0.0,
+                dt_seconds: 0.016,
+                size_px: [320, 200],
+                events: vec![
+                    UiEvent::ModifiersChanged(UiModifiers::ctrl()),
+                    UiEvent::Key {
+                        key: UiKey::Character('s'),
+                        pressed: true,
+                        repeat: false,
+                        modifiers: UiModifiers::ctrl(),
+                    },
+                    UiEvent::Key {
+                        key: UiKey::Character('s'),
+                        pressed: false,
+                        repeat: false,
+                        modifiers: UiModifiers::ctrl(),
+                    },
+                ],
+            },
+            move |ui| {
+                // The exact consumption pattern the editor's menu bar uses.
+                ui.input_mut(|i| {
+                    if i.consume_key(egui::Modifiers::COMMAND, egui::Key::S) {
+                        seen.set(seen.get() + 1);
+                    }
+                });
+            },
+        );
+        assert_eq!(saves.get(), 1, "Ctrl+S must be consumable as a shortcut");
+    }
+
+    #[test]
+    fn text_events_drive_text_edit_and_case_is_normalized_for_keys() {
+        let mut ui = ctx();
+        // Typing must flow through Event::Text (lowercase preserved —
+        // only shortcut keys are normalized, not typed text). A TextEdit
+        // only accepts text while focused — pass 1 focuses it (what a
+        // real click does), pass 2 delivers the keystrokes.
+        let typed = Rc::new(std::cell::RefCell::new(String::new()));
+        let sink = typed.clone();
+        let id_cell = Rc::new(Cell::new(egui::Id::NULL));
+        let id_sink = id_cell.clone();
+        let _ = ui.run(UiInput::new([320, 200], 0.0, 0.016), move |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
+                let mut buf = String::new();
+                let response = ui.text_edit_singleline(&mut buf);
+                response.request_focus();
+                id_sink.set(response.id);
+            });
+        });
+        let _ = ui.run(
+            UiInput {
+                time_seconds: 0.1,
+                dt_seconds: 0.016,
+                size_px: [320, 200],
+                events: vec![UiEvent::Text("h".into()), UiEvent::Text("i".into())],
+            },
+            move |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
+                    let mut buf = sink.borrow_mut().clone();
+                    let response = ui.text_edit_singleline(&mut buf);
+                    assert!(response.has_focus(), "focus must persist");
+                    *sink.borrow_mut() = buf;
+                });
+            },
+        );
+        assert_eq!(&*typed.borrow(), "hi", "Text events must reach TextEdit");
+
+        // 'a' and 'A' normalize to the same shortcut key: both consume
+        // a Ctrl+A binding (layout-case independence).
+        for ch in ['a', 'A'] {
+            let mut ui = ctx();
+            let hits = Rc::new(Cell::new(0u32));
+            let seen = hits.clone();
+            let _ = ui.run(
+                UiInput {
+                    time_seconds: 0.0,
+                    dt_seconds: 0.016,
+                    size_px: [320, 200],
+                    events: vec![UiEvent::Key {
+                        key: UiKey::Character(ch),
+                        pressed: true,
+                        repeat: false,
+                        modifiers: UiModifiers::ctrl(),
+                    }],
+                },
+                move |ui| {
+                    ui.input_mut(|i| {
+                        if i.consume_key(egui::Modifiers::COMMAND, egui::Key::A) {
+                            seen.set(seen.get() + 1);
+                        }
+                    });
+                },
+            );
+            assert_eq!(hits.get(), 1, "'{ch}' must consume Ctrl+A");
+        }
+    }
+
+    #[test]
+    fn unmapped_keys_are_dropped_not_misdelivered() {
+        let mut ui = ctx();
+        // UiKey::Other has no egui representation: the pass must render
+        // without panicking and without inventing a key.
+        let frame = ui.run(
+            UiInput {
+                time_seconds: 0.0,
+                dt_seconds: 0.016,
+                size_px: [320, 200],
+                events: vec![UiEvent::Key {
+                    key: UiKey::Other,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: UiModifiers::NONE,
+                }],
+            },
+            |ui| {
+                egui::CentralPanel::default().show(ui, |ui| {
+                    ui.label("still renders");
+                });
+            },
+        );
+        assert!(!frame.meshes.is_empty());
     }
 }

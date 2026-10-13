@@ -46,6 +46,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 glam = { version = "0.34.1", features = ["serde"] }
 wgpu = "30.0.1"
 pollster = "1"
+# v1.1 windowing shell (ADR-0036): the interactive editor's OS window.
+# 0.30 is the ApplicationHandler event-loop generation; the adapter crate
+# for wgpu surfaces stays raw-window-handle (re-exported by wgpu itself).
+winit = "0.30"
 rapier3d = "0.36.1"
 kira = { version = "0.12.5", default-features = false }
 egui = "0.36.2"

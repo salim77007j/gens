@@ -111,6 +111,26 @@ cargo run -p gens-editor --example editor_hello -- --steps 24 --out editor_hello
 cargo test -p gens-renderer -- --ignored
 ```
 
+### The interactive editor (v1.1)
+
+Since v1.1 the editor opens a **real OS window** (winit 0.30 + the engine's own
+wgpu presentation — no egui windowing crates; ADR-0036):
+
+```bash
+# needs any Vulkan/DX12/Metal adapter; software like lavapipe works:
+cargo run -p gens-editor --bin gens-editor
+
+# headless verification mode (what CI runs on every push — xvfb on Linux):
+cargo run -p gens-editor --bin gens-editor -- --smoke-frames 22 \
+  --screenshot editor_window.png --json editor_window.json
+```
+
+Inside the window: live 3D viewport, Play/Pause/Stop/Save/Load toolbar, the
+File/Edit/GameObject/View/Help menu bar, keyboard shortcuts (Ctrl+S / Ctrl+O /
+Ctrl+Z / Ctrl+D / Del), click-to-select and drag-to-move in the Scene View
+(exact-geometry picking), and the editable Inspector. Play captures a pre-play
+snapshot; Stop restores it exactly.
+
 `scripts/verify.sh` runs the full local gate set (fmt, clippy `-D warnings`, build, tests, size gate, governance checks) — it must pass before every push.
 
 ## License

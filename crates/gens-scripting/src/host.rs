@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 /// Marks an entity as scripted and holds its script-facing state.
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, PartialEq)]
 pub struct ScriptComponent {
     /// Name of the compiled script in [`ScriptHost`] (its asset key).
     pub script: String,

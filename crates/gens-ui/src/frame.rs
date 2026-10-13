@@ -91,6 +91,90 @@ pub struct UiFrame {
     pub skipped_callbacks: usize,
 }
 
+/// Modifier keys held at the time of a UI event.
+///
+/// Pure data — the platform layer (windowing backend) owns the real
+/// device state and stamps each event with the snapshot it observed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct UiModifiers {
+    /// Either alt key held.
+    pub alt: bool,
+    /// Either control key held.
+    pub ctrl: bool,
+    /// Either shift key held.
+    pub shift: bool,
+    /// The Mac ⌘ Command key (always false on other platforms).
+    pub logo: bool,
+}
+
+impl UiModifiers {
+    /// No modifiers held.
+    pub const NONE: Self = Self {
+        alt: false,
+        ctrl: false,
+        shift: false,
+        logo: false,
+    };
+
+    /// `ctrl` (and `command` on Mac) held — the cross-platform shortcut
+    /// modifier egui matches with `Modifiers::command()`.
+    #[must_use]
+    pub fn ctrl() -> Self {
+        Self {
+            ctrl: true,
+            ..Self::NONE
+        }
+    }
+}
+
+/// Keyboard key vocabulary for the UI event stream.
+///
+/// Deliberately engine-owned (the same philosophy as `gens-input`'s
+/// action vocabulary, ADR-0015): the windowing backend translates
+/// native key codes into this enum, and the UI core never sees a
+/// platform type. `Character` is uppercase-normalized (`'a'` and `'A'`
+/// both arrive as `'A'`) so shortcuts are layout-case independent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiKey {
+    /// A character key, normalized uppercase (letters, digits,
+    /// punctuation). The egui mapping covers the Latin set; characters
+    /// outside it are dropped by the egui translation and counted.
+    Character(char),
+    /// Enter / Return.
+    Enter,
+    /// Tab.
+    Tab,
+    /// Backspace.
+    Backspace,
+    /// Delete (forward delete on Mac).
+    Delete,
+    /// Escape.
+    Escape,
+    /// Space.
+    Space,
+    /// Insert.
+    Insert,
+    /// Home.
+    Home,
+    /// End.
+    End,
+    /// Page up.
+    PageUp,
+    /// Page down.
+    PageDown,
+    /// Arrow up.
+    ArrowUp,
+    /// Arrow down.
+    ArrowDown,
+    /// Arrow left.
+    ArrowLeft,
+    /// Arrow right.
+    ArrowRight,
+    /// A key with no egui mapping (delivered so key state stays
+    /// truthful; the egui translation drops it and the pass counts it).
+    Other,
+}
+
 /// An input event for one UI pass.
 ///
 /// Mirrors the [`crate`] input philosophy: the platform layer (here:
@@ -127,6 +211,20 @@ pub enum UiEvent {
         /// Vertical delta.
         dy: f32,
     },
+    /// A key was pressed or released.
+    Key {
+        /// Which key.
+        key: UiKey,
+        /// `true` = pressed, `false` = released.
+        pressed: bool,
+        /// OS auto-repeat press (ignored by shortcut consumers).
+        repeat: bool,
+        /// Modifier state observed at the time of the event.
+        modifiers: UiModifiers,
+    },
+    /// The set of held modifiers changed (delivered without a key
+    /// press — egui tracks shortcut state from this).
+    ModifiersChanged(UiModifiers),
 }
 
 /// Per-pass input to [`crate::UiContext::run`].

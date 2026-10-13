@@ -90,6 +90,10 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools
+          # v1.1 window smoke: xvfb is the display server for the winit
+          # shell on Linux CI (no X server otherwise); xkbcommon's X11
+          # frontend is what winit dlopens at runtime.
+          sudo apt-get install -y xvfb libxkbcommon-x11-0
           # ICD auto-discovery from /usr/share/vulkan/icd.d; print the probe
           # as run-log evidence of which adapter CI actually renders with.
           ls /usr/share/vulkan/icd.d/ || true
@@ -210,6 +214,46 @@ jobs:
             echo "editor smoke snapshot: $(wc -c < smoke_editor.png) bytes"
           fi
 
+      - name: Interactive window smoke (v1.1 shell — REAL OS window + present + scripted interactions)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # ADR-0036: the interactive gens-editor binary opens a REAL OS
+          # window, presents real frames and runs a scripted self-
+          # verifying session (Play/Pause/Stop toolbar clicks at layout-
+          # captured rects, viewport drag traffic, Ctrl+S). Linux runs
+          # under xvfb (installed above); Windows and macOS runners have
+          # a desktop session. Same GPU best-effort convention as the
+          # headless editor on Windows (ADR-0011).
+          SMOKE_ARGS="--smoke-frames 22 --width 1600 --height 900 --screenshot smoke_editor_window.png --json smoke_editor_window.json"
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a cargo run -q -p gens-editor --bin gens-editor -- $SMOKE_ARGS
+          elif [ "$RUNNER_OS" = "Windows" ]; then
+            if cargo run -q -p gens-editor --bin gens-editor -- $SMOKE_ARGS; then
+              echo "window smoke ran on the Windows desktop session"
+            else
+              echo "EDITOR-WINDOW-SKIP: Windows runner had no usable adapter or desktop this run (documented, ADR-0011 convention)"
+              exit 0
+            fi
+          else
+            cargo run -q -p gens-editor --bin gens-editor -- $SMOKE_ARGS
+          fi
+          test -f smoke_editor_window.png
+          test -f smoke_editor_window.json
+          python3 - <<'PY'
+          import json
+          evidence = json.load(open("smoke_editor_window.json"))
+          assert evidence["format"] == "gens-editor-smoke-1", evidence
+          assert evidence["error"] is None, evidence
+          interactions = evidence["interactions"]
+          for key in ("play_button_clicked", "play_started_simulation", "pause_worked",
+                      "stop_restored_edit_mode", "ctrl_s_saved_scene"):
+              assert interactions[key] is True, f"{key} must be verified: {interactions}"
+          assert interactions["viewport_drag_frames"] >= 3, interactions
+          print("window smoke verdicts:", json.dumps(interactions))
+          PY
+          echo "editor window smoke: $(wc -c < smoke_editor_window.png) bytes"
+
       - name: Headless profiler smoke (ADR-0027 observation-only proof + phase timings + memory)
         if: steps.detect.outputs.active == 'true'
         shell: bash
@@ -304,6 +348,8 @@ jobs:
             smoke_net.json
             smoke_editor.png
             smoke_editor.json
+            smoke_editor_window.png
+            smoke_editor_window.json
             smoke_profile.json
             smoke_cinematic.json
             smoke_worldgen.json

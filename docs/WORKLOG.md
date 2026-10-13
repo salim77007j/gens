@@ -383,3 +383,46 @@ Rules:
 - WHAT: tag-triggered release pipeline `.github/workflows/release.yml` (ADR-0035): builds on GitHub runners from the v* tag itself — gens-editor (editor demo build) + gens-player/gens-pkg release zips for Windows x86_64 and Linux x86_64, each zip carrying a README that states the headless-by-design scope (ADR-0028) before anything runs; two deterministic example games via the new gens-build/examples/release_games.rs (hello-patrol, hello-sink — each built, hash-re-verified and player-run 120 steps clean as the attach gate, plus a CLI end-to-end run of the built package through gens-player); the gens-release-1 self-validating manifest; SHA256SUMS over every attached asset; the GitHub Release composed from docs/release/RELEASE_HEADER.md + the verbatim PHASE_10_REPORT.md and marked Latest; a verify-windows job that downloads the PUBLISHED zips and launches them on a real Windows runner (checksum re-check -> extract -> existence gates -> editor render best-effort with R-028 marker -> player hard gate -> gens-pkg verify round-trip). Release auth is the workflow-ephemeral GITHUB_TOKEN; no user credential enters CI. Docs: RELEASE_HEADER.md, BUNDLE_README.md, ADR-0035, R-036.
 - WHY: the roadmap is complete (Phase 10 done, tag phase10-complete); shipping to a downstream user requires artifacts built by CI (the sandbox cannot cross-compile MSVC or execute PEs) and a launch proof that runs where the user runs. The honest headless boundary is stated in the release notes and every bundle README so the artifacts cannot oversell themselves.
 - EVIDENCE: commits on branch release-v1.0.0; CI: branch run green, then release run for tag v1.0.0 (jobs: build-linux, build-windows, games, manifest, release, verify-windows) — ledger in docs/evidence/release-v1/ after completion; verify-windows verdicts EDITOR-VERIFY-OK/EDITOR-SKIP + PLAYER-VERIFY-OK in the run log.
+
+## v1.1 — the interactive window shell (ADR-0036)
+
+- V11-1 `gens-ui`: keyboard events in the neutral stream — UiEvent::Key +
+  ModifiersChanged, an engine-owned UiKey vocabulary (upper-normalized
+  characters + named keys) and UiModifiers; egui translation drops unmapped
+  keys honestly; tests pin Ctrl+S consumption, case-normalized shortcuts, and
+  Text-driven TextEdit (focus-gated like a real click).
+- V11-2 `gens-renderer` + `gens-editor/window`: GpuContext retains its
+  instance/adapter (wgpu 30 surfaces take window handles at create_surface;
+  the instance display handle is a GLES concern); SurfaceTarget (format
+  policy RGBA8-preferred/BGRA-with-CPU-swizzle, present via upload, wgpu 30
+  status-enum acquire mapped — Occluded skips honestly, Outdated/Lost retry)
+  and the winit→UiEvent translation; both unit-tested headlessly.
+- V11-3 `gens-editor/playmode`: WorldSnapshot over the editor's FULL authored
+  vocabulary (name/hierarchy-by-name/transform/active/MeshSlot/AuthoredBody/
+  ScriptComponent); restore despawns snapshot-eligible rows (resource-seed
+  rows survive, same content filter as save::capture_world), re-creates live
+  physics bodies from authored specs into a FRESH PhysicsWorld, re-attaches
+  hierarchy; gensscene-1 lossless scene document (serde mirror types);
+  ScriptComponent gains PartialEq. Tests: exact round-trips, live body
+  re-creation, hierarchy rebuild, dangling-parent/duplicate-name rejection.
+- V11-4 interactive editing: Play toolbar (Play/Pause/Stop/Save/Load + live
+  mode/clock), GameObject menu, shortcut hints + pre-menu consumption
+  (typing-aware), exact-geometry scene-view picking (inverse-view_proj ray,
+  OBB slab / bounded-plane quad tests) + camera-plane object drags (physics
+  follows; disabled mid-play), undo ops (transform/delete/create) with the
+  SHARED execute_editor_command (bin and example run identical code);
+  play→mutate→Stop restores the capture exactly (tested).
+- V11-5 `gens-editor` bin: the interactive window (winit ApplicationHandler,
+  continuous vsync redraw, resize re-targets shell+surface, wall-clock fixed
+  accumulator capped at 4 steps/frame) + the --smoke-frames CI mode
+  (scripted real-traffic session: layout-captured toolbar clicks, viewport
+  drag, Ctrl+S key events; verifies play/pause/stop transitions; writes PNG
+  + gens-editor-smoke-1 JSON evidence; red on any missed verdict).
+- V11-6 CI + docs: interactive-window smoke step on all 3 OSes (xvfb Linux,
+  desktop Windows/macOS; Windows keeps the auditable skip convention) with
+  JSON verdict assertions; ADR-0036, R-037, RELEASE_V1_1_NOTES.md,
+  BUNDLE_README v1.1, README interactive section, release.yml rewrite (3-OS
+  builds + per-OS launch-verification of the PUBLISHED zips; Linux/macOS
+  window smokes hard gates). Local gates: fmt clean, clippy -D warnings
+  clean, 508 tests green across 45 suites, gens-release-1 manifest gate
+  revalidated (members=20 adrs=36 risks=37 tags=11).

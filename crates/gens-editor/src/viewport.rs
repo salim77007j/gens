@@ -7,16 +7,21 @@
 //! (RGB axes at the selection) is drawn by egui's painter on top, using
 //! the same `view_proj` matrix — one source of truth for projection.
 //!
-//! Picking is via the hierarchy (click a row); viewport dragging orbits
-//! the camera — both are real, scripted-replayable interactions.
+//! v1.1 adds real scene-view interaction: click an object to select it,
+//! drag it to move (on the camera-facing plane through the object),
+//! drag empty space to orbit. Picking is exact — the pointer ray is
+//! unprojected through the inverse `view_proj` and tested against each
+//! draw's actual geometry in local space (OBB slab test for cubes and
+//! markers, bounded plane test for quads) — no bounding-sphere hacks.
+//! Every drag records an undo op; hierarchy clicks still select too.
 
 use crate::{
-    model::{MeshSlot, ShapeKind},
-    shell::EditorState,
+    model::{MeshSlot, ShapeKind, UndoOp},
+    shell::{EditorState, PlayMode},
     theme,
 };
 use gens_ecs::prelude::*;
-use gens_math::{Mat4, Vec3, vec3};
+use gens_math::{Mat4, Vec3, Vec4, vec3};
 use gens_renderer::camera::Camera;
 use gens_renderer::{
     Draw, GpuContext, GpuMesh, Renderer, clear_color_rgba8, mesh, srgb_byte_to_linear,
@@ -82,6 +87,8 @@ impl OrbitCam {
 /// One entity's drawable description collected from the world.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CollectedDraw {
+    /// The drawn entity (the pick target).
+    pub entity: Entity,
     /// Geometry to rasterize.
     pub shape: ShapeKind,
     /// Opaque tint (RGBA8).
@@ -118,12 +125,28 @@ pub fn collect_draws(world: &World) -> Vec<CollectedDraw> {
             model
         };
         out.push(CollectedDraw {
+            entity,
             shape: slot.shape,
             tint: slot.tint,
             model,
         });
     }
     out
+}
+
+/// Live object-drag state (pure data on [`EditorState`], replayable).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ViewportDrag {
+    /// The dragged entity.
+    pub entity: Entity,
+    /// Its transform when the drag began (the undo payload).
+    pub before: Transform,
+    /// World-space offset between the entity origin and the pointer's
+    /// plane intersection at drag start (keeps the grab point sticky).
+    pub grab_offset: Vec3,
+    /// Whether the drag actually moved anything (below-threshold drags
+    /// record no undo op).
+    pub moved: bool,
 }
 
 /// Builds the tinted `GpuMesh` for a draw key (owned; the caller caches
@@ -178,6 +201,122 @@ pub fn project(world_pos: Vec3, view_proj: Mat4, rect: egui::Rect) -> Option<egu
         rect.min.x + (ndc.x + 1.0) * 0.5 * rect.width(),
         rect.min.y + (1.0 - ndc.y) * 0.5 * rect.height(),
     ))
+}
+
+/// Unprojects a pixel position into a world-space picking ray
+/// `(origin, direction)` through the inverse `view_proj`.
+///
+/// The direction is normalized; a degenerate rect (zero extent) yields
+/// the zero direction, which can never hit anything.
+#[must_use]
+pub fn screen_ray(view_proj: Mat4, rect: egui::Rect, pos: egui::Pos2) -> (Vec3, Vec3) {
+    if rect.width() <= 0.0 || rect.height() <= 0.0 {
+        return (Vec3::ZERO, Vec3::ZERO);
+    }
+    let nx = (pos.x - rect.min.x) / rect.width() * 2.0 - 1.0;
+    let ny = 1.0 - (pos.y - rect.min.y) / rect.height() * 2.0;
+    let inverse = view_proj.inverse();
+    let unproject = |z: f32| {
+        let clip = Vec4::new(nx, ny, z, 1.0);
+        let world = inverse * clip;
+        Vec3::new(world.x, world.y, world.z) / world.w
+    };
+    let near = unproject(-1.0);
+    let far = unproject(1.0);
+    (near, (far - near).normalize_or_zero())
+}
+
+/// First intersection distance of a local-space ray with a draw's
+/// actual geometry (the exact-shape pick, no sphere approximations).
+///
+/// - Cube / Marker: slab test against the local unit cube
+///   `[-0.5, 0.5]^3` (markers carry their 0.15 scale in the model
+///   matrix, which the local-space transform already accounts for);
+/// - Quad: bounded plane test on the local `z = 0` plane with
+///   `|x|, |y| <= 0.5` (the unit quad lives in the XY plane).
+#[must_use]
+pub fn hit_distance(shape: ShapeKind, model: Mat4, origin: Vec3, dir: Vec3) -> Option<f32> {
+    if dir == Vec3::ZERO {
+        return None;
+    }
+    let inverse = model.inverse();
+    let local_origin = inverse.transform_point3(origin);
+    let local_dir = inverse.transform_vector3(dir);
+    match shape {
+        ShapeKind::Cube | ShapeKind::Marker => ray_box(
+            local_origin,
+            local_dir,
+            vec3(-0.5, -0.5, -0.5),
+            vec3(0.5, 0.5, 0.5),
+        ),
+        ShapeKind::Quad => ray_unit_quad(local_origin, local_dir),
+    }
+}
+
+/// Ray vs axis-aligned box: returns the entry distance (`>= 0` when the
+/// origin is inside) or `None` on a miss.
+fn ray_box(origin: Vec3, dir: Vec3, min: Vec3, max: Vec3) -> Option<f32> {
+    // A tiny epsilon keeps zero direction components from producing
+    // 0 * infinity = NaN; the perturbation is far below any scene scale.
+    let dir = dir + vec3(1e-8, 1e-8, 1e-8);
+    let inv = Vec3::ONE / dir;
+    let t0 = (min - origin) * inv;
+    let t1 = (max - origin) * inv;
+    let near = t0.min(t1).max_element();
+    let far = t0.max(t1).min_element();
+    if far >= near.max(0.0) {
+        Some(near.max(0.0))
+    } else {
+        None
+    }
+}
+
+/// Ray vs the unit quad (local `z = 0` plane, `|x|,|y| <= 0.5`).
+fn ray_unit_quad(origin: Vec3, dir: Vec3) -> Option<f32> {
+    if dir.z.abs() < 1e-8 {
+        return None;
+    }
+    let t = -origin.z / dir.z;
+    if t < 0.0 {
+        return None;
+    }
+    let hit = origin + dir * t;
+    if hit.x.abs() <= 0.5 && hit.y.abs() <= 0.5 {
+        Some(t)
+    } else {
+        None
+    }
+}
+
+/// Picks the nearest drawable entity under a pixel position.
+///
+/// Hits are compared in WORLD-space distance: local t-values are
+/// converted by scaling with the local ray direction's length (the
+/// uniform-distance trick: t_world = t_local * |rd_local| / |rd_world|,
+/// and |rd_world| is 1 by construction).
+#[must_use]
+pub fn pick_at(
+    world: &World,
+    view_proj: Mat4,
+    rect: egui::Rect,
+    pos: egui::Pos2,
+) -> Option<Entity> {
+    let (origin, dir) = screen_ray(view_proj, rect, pos);
+    if dir == Vec3::ZERO {
+        return None;
+    }
+    let mut best: Option<(f32, Entity)> = None;
+    for draw in collect_draws(world) {
+        let Some(t_local) = hit_distance(draw.shape, draw.model, origin, dir) else {
+            continue;
+        };
+        let local_dir = draw.model.inverse().transform_vector3(dir);
+        let t_world = t_local * local_dir.length();
+        if best.is_none() || t_world < best.expect("checked above").0 {
+            best = Some((t_world, draw.entity));
+        }
+    }
+    best.map(|(_, entity)| entity)
 }
 
 /// The viewport: renderer + shape cache + egui texture handle.
@@ -375,8 +514,8 @@ impl EditorViewport {
     }
 
     /// Draws the viewport content INTO the UI (called during the paint
-    /// pass; read-only on self).
-    pub fn panel(&self, ui: &mut egui::Ui, state: &mut EditorState, world: &World) {
+    /// pass; world is mutable so object drags apply same-frame).
+    pub fn panel(&self, ui: &mut egui::Ui, state: &mut EditorState, world: &mut World) {
         // Camera toolbar (reference: Perspective/Lit badges + gizmo row).
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new("Perspective").color(theme::TEXT_DIM));
@@ -403,7 +542,15 @@ impl EditorViewport {
             return;
         };
 
-        // Image + orbit drag (real interaction: drag rotates the camera).
+        // Image + real scene-view interaction (v1.1):
+        // - click an object -> select it (exact-geometry pick);
+        // - click empty space -> deselect;
+        // - drag an object -> move it on the camera-facing plane
+        //   through its origin (an undo op is recorded on release);
+        // - drag empty space -> orbit the camera (classic behavior).
+        // Object drags are an EDIT-mode tool: mid-simulation the
+        // physics body owns the transform, so dragging is disabled
+        // while Playing (orbiting still works).
         let size = egui::vec2(self.last_size[0] as f32, self.last_size[1] as f32);
         let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click_and_drag());
         ui.painter().image(
@@ -412,11 +559,85 @@ impl EditorViewport {
             egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
             egui::Color32::WHITE,
         );
-        let drag = response.drag_delta();
-        if drag != egui::Vec2::ZERO {
-            state.orbit.yaw_deg = (state.orbit.yaw_deg + drag.x * 0.5).rem_euclid(360.0);
-            state.orbit.pitch_deg = (state.orbit.pitch_deg - drag.y * 0.5).clamp(-85.0, 85.0);
+
+        let aspect = self.last_size[0] as f32 / self.last_size[1].max(1) as f32;
+        let view_proj = state.orbit.camera(aspect).view_proj();
+        let editable = state.play_mode != PlayMode::Playing;
+
+        if response.drag_started()
+            && editable
+            && let Some(pos) = response.interact_pointer_pos()
+            && rect.contains(pos)
+            && let Some(entity) = pick_at(world, view_proj, rect, pos)
+        {
+            let before = world
+                .get::<Transform>(entity)
+                .copied()
+                .unwrap_or(Transform::IDENTITY);
+            let origin = world_position(world, entity);
+            let grab_offset = plane_grab_offset(state, view_proj, rect, pos, origin);
+            state.viewport_drag = Some(ViewportDrag {
+                entity,
+                before,
+                grab_offset,
+                moved: false,
+            });
         }
+        if response.dragged() {
+            match state.viewport_drag.clone() {
+                Some(mut drag) => {
+                    if let Some(pos) = response.interact_pointer_pos() {
+                        let normal = (state.orbit.eye() - state.orbit.target).normalize_or_zero();
+                        let (ro, rd) = screen_ray(view_proj, rect, pos);
+                        let denom = rd.dot(normal);
+                        if denom.abs() > 1e-5 {
+                            let t = (drag.before.position - ro).dot(normal) / denom;
+                            let new_position = ro + rd * t + drag.grab_offset;
+                            if let Some(mut transform) = world.get_mut::<Transform>(drag.entity) {
+                                transform.position = new_position;
+                            }
+                            // Physics follows so the next play-mode sync
+                            // does not snap the object back.
+                            if let Some(body) =
+                                world.get::<gens_physics::PhysicsBody>(drag.entity).copied()
+                            {
+                                world
+                                    .resource_mut::<gens_physics::PhysicsResource>()
+                                    .world
+                                    .set_body_position(body.handle, new_position);
+                            }
+                            drag.moved = true;
+                            state.viewport_drag = Some(drag);
+                        }
+                    }
+                }
+                None => {
+                    // Orbit drag (the pre-v1.1 behavior, unchanged).
+                    let drag_delta = response.drag_delta();
+                    if drag_delta != egui::Vec2::ZERO {
+                        state.orbit.yaw_deg =
+                            (state.orbit.yaw_deg + drag_delta.x * 0.5).rem_euclid(360.0);
+                        state.orbit.pitch_deg =
+                            (state.orbit.pitch_deg - drag_delta.y * 0.5).clamp(-85.0, 85.0);
+                    }
+                }
+            }
+        }
+        if response.drag_stopped()
+            && let Some(drag) = state.viewport_drag.take()
+            && drag.moved
+        {
+            state.undo_stack.push(UndoOp::Transform {
+                entity: drag.entity,
+                before: drag.before,
+            });
+        }
+        if response.clicked() {
+            state.selected = response
+                .interact_pointer_pos()
+                .and_then(|pos| pick_at(world, view_proj, rect, pos));
+        }
+
         state.viewport_size_px = [
             rect.width().round().max(1.0) as u32,
             rect.height().round().max(1.0) as u32,
@@ -468,9 +689,42 @@ fn world_position(world: &World, entity: Entity) -> Vec3 {
         .unwrap_or(Vec3::ZERO)
 }
 
+/// The world-space offset between `origin` and the pointer's
+/// intersection with the camera-facing plane through `origin` (the
+/// sticky grab point for object drags). Zero when the ray is parallel
+/// to the plane.
+fn plane_grab_offset(
+    state: &EditorState,
+    view_proj: Mat4,
+    rect: egui::Rect,
+    pos: egui::Pos2,
+    origin: Vec3,
+) -> Vec3 {
+    let normal = (state.orbit.eye() - state.orbit.target).normalize_or_zero();
+    let (ro, rd) = screen_ray(view_proj, rect, pos);
+    let denom = rd.dot(normal);
+    if denom.abs() > 1e-5 {
+        let t = (origin - ro).dot(normal) / denom;
+        origin - (ro + rd * t)
+    } else {
+        Vec3::ZERO
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A cube at `pos` (the pick-test fixture).
+    fn world_with_cube_at(pos: Vec3) -> World {
+        let mut world = World::new();
+        world.spawn((
+            gens_ecs::Name::new("Cube"),
+            Transform::from_position(pos),
+            MeshSlot::cube([255, 0, 0, 255]),
+        ));
+        world
+    }
 
     #[test]
     fn orbit_eye_stays_on_the_sphere() {
@@ -551,5 +805,113 @@ mod tests {
         let gpu = build_tinted_mesh(&device, ShapeKind::Cube, red).unwrap();
         let base = mesh::cube();
         assert_eq!(gpu.index_count(), base.index_count());
+    }
+
+    fn pick_rect() -> egui::Rect {
+        egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(800.0, 600.0))
+    }
+
+    #[test]
+    fn pick_hits_the_projected_object_center() {
+        let pos = vec3(2.0, 1.0, -3.0);
+        let world = world_with_cube_at(pos);
+        let orbit = OrbitCam::default();
+        let cam = orbit.camera(800.0 / 600.0);
+        let vp = cam.view_proj();
+        // The pixel the cube's center projects to MUST pick the cube —
+        // the projection and the unprojection are exact inverses.
+        let screen = project(pos, vp, pick_rect()).expect("cube is in front of the camera");
+        let picked = pick_at(&world, vp, pick_rect(), screen);
+        assert!(picked.is_some(), "the projected center must pick something");
+    }
+
+    #[test]
+    fn pick_misses_empty_space() {
+        let world = world_with_cube_at(vec3(2.0, 1.0, -3.0));
+        let orbit = OrbitCam::default();
+        let cam = orbit.camera(800.0 / 600.0);
+        let vp = cam.view_proj();
+        // The rect corner (far from any object's projection) is sky.
+        let picked = pick_at(&world, vp, pick_rect(), egui::pos2(790.0, 590.0));
+        assert_eq!(picked, None, "empty space must not pick");
+    }
+
+    #[test]
+    fn hit_distance_is_exact_for_boxes_and_quads() {
+        // A ray straight at a cube's face hits at the known distance:
+        // cube centered at z = -5, camera ray marching -z from the
+        // origin; the near face sits at z = -4.5 (t = 4.5).
+        let model = Mat4::from_translation(vec3(0.0, 0.0, -5.0));
+        let t = hit_distance(ShapeKind::Cube, model, Vec3::ZERO, vec3(0.0, 0.0, -1.0));
+        assert!((t.unwrap() - 4.5).abs() < 1e-5, "face at t=4.5, got {t:?}");
+
+        // A ray aimed wide of the half-extent misses.
+        let t = hit_distance(
+            ShapeKind::Cube,
+            model,
+            Vec3::ZERO,
+            vec3(0.9, 0.0, -1.0).normalize_or_zero(),
+        );
+        assert!(t.is_none(), "off-axis ray must miss the unit cube");
+
+        // A rotated cube still hits exactly (the OBB transform is part
+        // of the local-space test).
+        let rotated = Mat4::from_translation(vec3(0.0, 0.0, -5.0))
+            * Mat4::from_quat(gens_math::Quat::from_rotation_y(
+                std::f32::consts::FRAC_PI_4,
+            ));
+        let t = hit_distance(ShapeKind::Cube, rotated, Vec3::ZERO, vec3(0.0, 0.0, -1.0));
+        assert!(t.is_some(), "a rotated cube still fills the view axis");
+
+        // Quads: within bounds hits, outside bounds misses.
+        let quad = Mat4::IDENTITY;
+        let t = hit_distance(
+            ShapeKind::Quad,
+            quad,
+            vec3(0.0, 0.0, 2.0),
+            vec3(0.0, 0.0, -1.0),
+        );
+        assert!(
+            (t.unwrap() - 2.0).abs() < 1e-5,
+            "straight-on quad hit at t=2"
+        );
+        let t = hit_distance(
+            ShapeKind::Quad,
+            quad,
+            vec3(0.9, 0.0, 2.0),
+            vec3(0.0, 0.0, -1.0),
+        );
+        assert_eq!(t, None, "outside |x| <= 0.5 must miss");
+    }
+
+    #[test]
+    fn pick_prefers_the_nearest_hit() {
+        // Two cubes on ONE view ray: the far cube sits at eye + 2*(near
+        // - eye), so both project to the same pixel and the nearest
+        // must win.
+        let orbit = OrbitCam::default();
+        let cam = orbit.camera(800.0 / 600.0);
+        let vp = cam.view_proj();
+        let eye = orbit.eye();
+        let near_pos = vec3(2.0, 1.0, -3.0);
+        let far_pos = eye + (near_pos - eye) * 2.0;
+
+        let mut world = World::new();
+        world.spawn((
+            gens_ecs::Name::new("Far"),
+            Transform::from_position(far_pos),
+            MeshSlot::cube([0, 0, 255, 255]),
+        ));
+        let near = world
+            .spawn((
+                gens_ecs::Name::new("Near"),
+                Transform::from_position(near_pos),
+                MeshSlot::cube([0, 255, 0, 255]),
+            ))
+            .id();
+
+        let screen = project(near_pos, vp, pick_rect()).expect("near cube is visible");
+        let picked = pick_at(&world, vp, pick_rect(), screen);
+        assert_eq!(picked, Some(near), "the nearest hit must win");
     }
 }
