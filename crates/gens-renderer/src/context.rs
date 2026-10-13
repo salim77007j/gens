@@ -64,12 +64,16 @@ pub fn pick_best(infos: &[AdapterInfo]) -> Option<usize> {
 /// adapter they came from.
 ///
 /// Creation never requires a window or surface (ADR-0010), so the same code
-/// path works on a developer workstation and on a headless CI runner.
+/// path works on a developer workstation and on a headless CI runner. The
+/// instance is retained so the windowing shell (v1.1) can create a surface
+/// from the same context; headless callers simply never touch it.
 pub struct GpuContext {
     /// Reported info for the adapter in use.
     pub adapter_info: AdapterInfo,
     /// Classification the selector assigned to that adapter.
     pub adapter_class: AdapterClass,
+    instance: wgpu::Instance,
+    adapter: wgpu::Adapter,
     device: wgpu::Device,
     queue: wgpu::Queue,
 }
@@ -92,10 +96,14 @@ impl GpuContext {
     pub fn with_backends(backends: Backends) -> Result<GpuContext> {
         // Headless-first (ADR-0010): no display handle, ever — the offscreen
         // path needs none, and absence keeps GL/Wayland surprises away.
+        // Surfaces still work from this instance on the supported backend
+        // set (wgpu 30: the display handle is consumed by GLES only; the
+        // windowing shell's Vulkan/Metal/DX12 surfaces take their handles
+        // from the window at `create_surface`).
         let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
         desc.backends = backends;
         let instance = wgpu::Instance::new(desc);
-        let adapters = pollster::block_on(instance.enumerate_adapters(backends));
+        let mut adapters = pollster::block_on(instance.enumerate_adapters(backends));
 
         let infos: Vec<AdapterInfo> = adapters.iter().map(wgpu::Adapter::get_info).collect();
         let best = pick_best(&infos).ok_or_else(|| {
@@ -134,6 +142,10 @@ impl GpuContext {
         Ok(GpuContext {
             adapter_info,
             adapter_class,
+            instance,
+            // The selected adapter, retained for surface capability
+            // queries (windowing shell). Safe after the device request.
+            adapter: adapters.swap_remove(best),
             device,
             queue,
         })
@@ -143,6 +155,19 @@ impl GpuContext {
     #[must_use]
     pub fn device(&self) -> &wgpu::Device {
         &self.device
+    }
+
+    /// The wgpu instance (surface creation for the windowing shell).
+    #[must_use]
+    pub fn instance(&self) -> &wgpu::Instance {
+        &self.instance
+    }
+
+    /// The wgpu adapter the device was requested from (surface
+    /// capability queries for the windowing shell).
+    #[must_use]
+    pub fn adapter(&self) -> &wgpu::Adapter {
+        &self.adapter
     }
 
     /// The command queue.

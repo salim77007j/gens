@@ -43,6 +43,7 @@ pub mod shell;
 pub mod telemetry;
 pub mod theme;
 pub mod viewport;
+pub mod window;
 
 pub use model::{AuthoredBody, EditorCommand, MeshSlot, ShapeKind};
 pub use shell::{BottomTab, EditorShell, EditorState, FrameStats, ViewTab};
