@@ -1,0 +1,1384 @@
+==> [0/18] governance docs present
+==> [1/18] secret scan
+==> [2/18] cargo fmt
+==> [3/18] cargo clippy
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+    Checking cfg-if v1.0.5
+   Compiling autocfg v1.5.1
+   Compiling serde_core v1.0.229
+   Compiling syn v3.0.8
+   Compiling syn v2.0.119
+   Compiling thiserror v2.0.21
+   Compiling thiserror-impl v2.0.21
+   Compiling libm v0.2.16
+   Compiling num-traits v0.2.19
+   Compiling portable-atomic v1.15.0
+   Compiling bytemuck_derive v1.12.1
+    Checking once_cell v1.21.4
+    Checking bitflags v2.13.2
+    Checking foldhash v0.2.0
+    Checking smallvec v1.16.3
+    Checking log v0.4.34
+    Checking glam v0.34.1
+    Checking bytemuck v1.25.2
+    Checking pin-project-lite v0.2.17
+   Compiling libc v0.2.190
+    Checking hashbrown v0.17.1
+    Checking arrayvec v0.7.8
+    Checking equivalent v1.0.2
+   Compiling serde v1.0.229
+   Compiling cfg_aliases v0.2.2
+   Compiling serde_derive v1.0.229
+    Checking gens-math v0.1.0 (/home/z/my-project/gens/crates/gens-math)
+    Checking indexmap v2.14.2
+   Compiling version_check v0.9.5
+    Checking allocator-api2 v0.2.21
+   Compiling crossbeam-utils v0.8.23
+    Checking hashbrown v0.16.1
+   Compiling zerocopy v0.8.62
+    Checking tracing-core v0.1.36
+   Compiling zerocopy-derive v0.8.62
+    Checking thread_local v1.1.10
+    Checking static_assertions v1.1.0
+   Compiling tracing-attributes v0.1.31
+    Checking slab v0.4.12
+    Checking tracing v0.1.44
+   Compiling winnow v1.0.4
+   Compiling toml_parser v1.1.5+spec-1.1.0
+    Checking futures-core v0.3.34
+   Compiling zmij v1.0.23
+    Checking parking v2.2.1
+    Checking futures-io v0.3.34
+    Checking fastrand v2.5.0
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling toml_edit v0.25.17+spec-1.1.0
+    Checking futures-lite v2.6.1
+   Compiling profiling-procmacros v1.0.18
+   Compiling unicode-segmentation v1.13.3
+   Compiling serde_json v1.0.154
+    Checking lazy_static v1.5.1
+   Compiling convert_case v0.10.0
+    Checking profiling v1.0.18
+   Compiling bevy_macro_utils v0.20.0
+    Checking libloading v0.8.9
+   Compiling parking_lot_core v0.9.12
+    Checking itoa v1.0.18
+   Compiling unicode-xid v0.2.6
+    Checking memchr v2.8.3
+   Compiling crunchy v0.2.4
+    Checking byteorder v1.5.0
+   Compiling typeid v1.0.3
+    Checking spin v0.12.3
+    Checking bevy_platform v0.20.0
+   Compiling derive_more-impl v2.1.1
+    Checking ordered-float v5.5.0
+   Compiling tiny-keccak v2.0.2
+   Compiling mutants v0.0.3
+   Compiling rustc-hash v2.1.3
+   Compiling find-msvc-tools v0.1.14
+    Checking scopeguard v1.2.0
+   Compiling erased-serde v0.4.10
+    Checking rustc-hash v1.1.0
+   Compiling shlex v2.0.1
+    Checking downcast-rs v2.0.2
+    Checking simd-adler32 v0.3.10
+   Compiling cc v1.8.0
+    Checking derive_more v2.1.1
+    Checking naga-types v30.0.1
+    Checking lock_api v0.4.14
+   Compiling unsynn v0.3.0
+    Checking concurrent-queue v2.5.0
+   Compiling slotmap v1.1.1
+   Compiling naga v30.0.1
+    Checking approx v0.5.1
+    Checking disqualified v1.1.0
+    Checking bit-vec v0.9.1
+    Checking unicode-width v0.2.2
+   Compiling crc32fast v1.5.2
+    Checking async-task v4.7.1
+    Checking adler2 v2.0.1
+   Compiling pkg-config v0.3.34
+   Compiling ash v0.38.0+1.3.281
+    Checking async-executor v1.14.0
+   Compiling getrandom v0.2.17
+   Compiling wayland-sys v0.31.11
+    Checking codespan-reporting v0.13.1
+    Checking bit-set v0.10.0
+    Checking bevy_utils v0.20.0
+   Compiling variadics_please v2.0.0
+    Checking parking_lot v0.12.5
+   Compiling ring v0.17.14
+   Compiling bevy_reflect_derive v0.20.0
+   Compiling bevy_ecs_macro_logic v0.20.0
+    Checking half v2.7.1
+    Checking crossbeam-queue v0.3.14
+    Checking spirv v0.4.0+sdk-1.4.341.0
+   Compiling assert_type_match v0.1.1
+    Checking atomic-waker v1.1.2
+   Compiling khronos-egl v6.0.0
+    Checking raw-window-handle v0.6.2
+    Checking bevy_ptr v0.20.0
+    Checking mint v0.5.9
+    Checking bevy_reflect v0.20.0
+    Checking glam v0.33.12
+    Checking wgpu-types v30.0.1
+   Compiling const-random-macro v0.1.16
+    Checking bevy_tasks v0.20.0
+   Compiling bevy_ecs_macros v0.20.0
+    Checking miniz_oxide v0.9.1
+    Checking dlib v0.5.3
+   Compiling ahash v0.8.12
+   Compiling wgpu-hal v30.0.1
+    Checking bumpalo v3.20.3
+    Checking nonmax v0.5.5
+    Checking regex-syntax v0.8.11
+    Checking presser v0.3.1
+    Checking fixedbitset v0.5.7
+    Checking bevy_ecs v0.20.0
+    Checking gpu-allocator v0.28.0
+    Checking regex-automata v0.4.18
+    Checking flate2 v1.1.10
+    Checking wgpu-naga-bridge v30.0.1
+    Checking const-random v0.1.18
+    Checking miniz_oxide v0.8.9
+    Checking fdeflate v0.3.7
+    Checking polycool v0.4.0
+    Checking safe_arch v1.2.0
+   Compiling matrixmultiply v0.3.11
+    Checking untrusted v0.9.0
+    Checking zune-core v0.5.3
+    Checking glow v0.17.0
+    Checking either v1.19.0
+    Checking renderdoc-sys v1.1.0
+    Checking zeroize v1.9.1
+   Compiling anyhow v1.0.104
+    Checking pxfm v0.1.30
+    Checking rand_core v0.10.1
+   Compiling inflections v1.1.1
+   Compiling gltf-derive v1.4.1
+    Checking rustls-pki-types v1.15.1
+    Checking moxcms v0.8.1
+    Checking zune-jpeg v0.5.15
+    Checking wide v1.7.1
+    Checking kurbo v0.13.1
+    Checking png v0.18.1
+    Checking matchers v0.2.0
+    Checking sharded-slab v0.1.7
+    Checking tracing-log v0.2.0
+   Compiling wgpu-core v30.0.1
+    Checking font-types v0.12.6
+    Checking color v0.3.3
+    Checking num-complex v0.4.6
+    Checking num-integer v0.1.47
+    Checking euclid v0.22.14
+   Compiling heapless v0.8.0
+   Compiling getrandom v0.4.3
+   Compiling litrs v1.0.0
+    Checking linebender_resource_handle v0.1.1
+    Checking nu-ansi-term v0.50.3
+    Checking rawpointer v0.2.1
+    Checking byteorder-lite v0.1.0
+    Checking image v0.25.10
+    Checking tracing-subscriber v0.3.23
+   Compiling document-features v0.2.12
+    Checking peniko v0.6.1
+    Checking simba v0.10.2
+    Checking guillotiere v0.7.0
+    Checking num-rational v0.4.2
+    Checking read-fonts v0.41.0
+    Checking wgpu-core-deps-windows-linux-android v30.0.1
+    Checking gltf-json v1.4.1
+    Checking gens-ecs v0.1.0 (/home/z/my-project/gens/crates/gens-ecs)
+    Checking hash32 v0.3.1
+   Compiling wgpu v30.0.1
+   Compiling nalgebra-macros v0.3.0
+    Checking fearless_simd v0.4.1
+    Checking urlencoding v2.1.3
+    Checking typenum v1.20.1
+    Checking cpufeatures v0.3.1
+    Checking stable_deref_trait v1.2.1
+    Checking base64 v0.13.1
+   Compiling unicode-general-category v1.1.0
+   Compiling rustls v0.23.45
+    Checking gltf v1.4.1
+    Checking vello_common v0.1.0
+    Checking chacha20 v0.10.2
+    Checking nalgebra v0.35.0
+    Checking rustls-webpki v0.103.15
+   Compiling smartstring v1.0.1
+    Checking gens-animation v0.1.0 (/home/z/my-project/gens/crates/gens-animation)
+   Compiling quinn-udp v0.5.16
+    Checking socket2 v0.6.5
+    Checking time-core v0.1.9
+    Checking num-conv v0.2.2
+    Checking emath v0.36.2
+    Checking deranged v0.5.8
+    Checking subtle v2.6.1
+    Checking powerfmt v0.2.1
+    Checking time v0.3.55
+    Checking ecolor v0.36.2
+    Checking glamx v0.3.1
+    Checking rand v0.10.3
+    Checking vello_cpu v0.1.0
+    Checking rstar v0.13.0
+    Checking harfrust v0.12.0
+    Checking skrifa v0.44.0
+    Checking gens-core v0.1.0 (/home/z/my-project/gens/crates/gens-core)
+    Checking rand_pcg v0.10.2
+   Compiling quinn v0.11.12
+    Checking mio v1.2.4
+    Checking ena v0.14.4
+   Compiling num-derive v0.5.1
+   Compiling tokio-macros v2.7.2
+    Checking self_cell v1.3.0
+    Checking nohash-hasher v0.2.0
+    Checking pollster v1.0.1
+    Checking base64 v0.23.1
+    Checking lru-slab v0.1.3
+    Checking tinyvec v1.13.3
+    Checking bytes v1.12.1
+    Checking uuid v1.28.0
+    Checking epaint_default_fonts v0.36.2
+    Checking epaint v0.36.2
+    Checking quinn-proto v0.11.19
+    Checking accesskit v0.24.1
+    Checking pem v4.0.0
+    Checking parry3d v0.31.1
+    Checking tokio v1.53.2
+    Checking yasna v0.6.0
+    Checking gens-assets v0.1.0 (/home/z/my-project/gens/crates/gens-assets)
+    Checking itertools v0.15.0
+   Compiling rhai_codegen v3.2.0
+    Checking thin-vec v0.2.21
+    Checking rhai v1.26.1
+    Checking egui v0.36.2
+    Checking rcgen v0.14.10
+    Checking rapier3d v0.36.1
+    Checking gens-renderer v0.1.0 (/home/z/my-project/gens/crates/gens-renderer)
+    Checking gens-ui v0.1.0 (/home/z/my-project/gens/crates/gens-ui)
+    Checking gens-scripting v0.1.0 (/home/z/my-project/gens/crates/gens-scripting)
+    Checking gens-networking v0.1.0 (/home/z/my-project/gens/crates/gens-networking)
+    Checking gens-cinematics v0.1.0 (/home/z/my-project/gens/crates/gens-cinematics)
+    Checking gens-profiler v0.1.0 (/home/z/my-project/gens/crates/gens-profiler)
+    Checking gens-ai v0.1.0 (/home/z/my-project/gens/crates/gens-ai)
+    Checking gens-input v0.1.0 (/home/z/my-project/gens/crates/gens-input)
+    Checking gens-worldgen v0.1.0 (/home/z/my-project/gens/crates/gens-worldgen)
+    Checking triple_buffer v9.0.0
+    Checking rtrb v0.4.0
+    Checking atomic-arena v0.1.2
+   Compiling pastey v0.2.3
+    Checking kira v0.12.5
+    Checking gens-physics v0.1.0 (/home/z/my-project/gens/crates/gens-physics)
+    Checking gens-runtime v0.1.0 (/home/z/my-project/gens/crates/gens-runtime)
+    Checking gens-build v0.1.0 (/home/z/my-project/gens/crates/gens-build)
+    Checking gens-editor v0.1.0 (/home/z/my-project/gens/crates/gens-editor)
+    Checking gens-audio v0.1.0 (/home/z/my-project/gens/crates/gens-audio)
+    Checking gens-plugin v0.1.0 (/home/z/my-project/gens/crates/gens-plugin)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 36s
+==> [4/18] cargo build
+   Compiling unicode-ident v1.0.26
+   Compiling cfg-if v1.0.5
+   Compiling serde_core v1.0.229
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling syn v3.0.8
+   Compiling syn v2.0.119
+   Compiling thiserror-impl v2.0.21
+   Compiling thiserror v2.0.21
+   Compiling libm v0.2.16
+   Compiling num-traits v0.2.19
+   Compiling portable-atomic v1.15.0
+   Compiling bytemuck_derive v1.12.1
+   Compiling once_cell v1.21.4
+   Compiling bitflags v2.13.2
+   Compiling smallvec v1.16.3
+   Compiling equivalent v1.0.2
+   Compiling foldhash v0.2.0
+   Compiling log v0.4.34
+   Compiling glam v0.34.1
+   Compiling bytemuck v1.25.2
+   Compiling pin-project-lite v0.2.17
+   Compiling hashbrown v0.17.1
+   Compiling libc v0.2.190
+   Compiling arrayvec v0.7.8
+   Compiling serde_derive v1.0.229
+   Compiling serde v1.0.229
+   Compiling indexmap v2.14.2
+   Compiling allocator-api2 v0.2.21
+   Compiling gens-math v0.1.0 (/home/z/my-project/gens/crates/gens-math)
+   Compiling hashbrown v0.16.1
+   Compiling tracing-core v0.1.36
+   Compiling zerocopy-derive v0.8.62
+   Compiling thread_local v1.1.10
+   Compiling unicode-segmentation v1.13.3
+   Compiling static_assertions v1.1.0
+   Compiling crossbeam-utils v0.8.23
+   Compiling tracing-attributes v0.1.31
+   Compiling zerocopy v0.8.62
+   Compiling slab v0.4.12
+   Compiling tracing v0.1.44
+   Compiling rustc-hash v2.1.3
+   Compiling parking v2.2.1
+   Compiling fastrand v2.5.0
+   Compiling futures-io v0.3.34
+   Compiling futures-core v0.3.34
+   Compiling futures-lite v2.6.1
+   Compiling toml_edit v0.25.17+spec-1.1.0
+   Compiling profiling-procmacros v1.0.18
+   Compiling lazy_static v1.5.1
+   Compiling bevy_macro_utils v0.20.0
+   Compiling profiling v1.0.18
+   Compiling zmij v1.0.23
+   Compiling convert_case v0.10.0
+   Compiling libloading v0.8.9
+   Compiling itoa v1.0.18
+   Compiling spin v0.12.3
+   Compiling memchr v2.8.3
+   Compiling byteorder v1.5.0
+   Compiling bevy_platform v0.20.0
+   Compiling derive_more-impl v2.1.1
+   Compiling serde_json v1.0.154
+   Compiling ordered-float v5.5.0
+   Compiling rustc-hash v1.1.0
+   Compiling simd-adler32 v0.3.10
+   Compiling scopeguard v1.2.0
+   Compiling downcast-rs v2.0.2
+   Compiling lock_api v0.4.14
+   Compiling unsynn v0.3.0
+   Compiling derive_more v2.1.1
+   Compiling naga-types v30.0.1
+   Compiling parking_lot_core v0.9.12
+   Compiling typeid v1.0.3
+   Compiling concurrent-queue v2.5.0
+   Compiling approx v0.5.1
+   Compiling adler2 v2.0.1
+   Compiling bit-vec v0.9.1
+   Compiling unicode-width v0.2.2
+   Compiling async-task v4.7.1
+   Compiling disqualified v1.1.0
+   Compiling bevy_utils v0.20.0
+   Compiling async-executor v1.14.0
+   Compiling bit-set v0.10.0
+   Compiling codespan-reporting v0.13.1
+   Compiling variadics_please v2.0.0
+   Compiling erased-serde v0.4.10
+   Compiling getrandom v0.2.17
+   Compiling parking_lot v0.12.5
+   Compiling bevy_reflect_derive v0.20.0
+   Compiling bevy_ecs_macro_logic v0.20.0
+   Compiling half v2.7.1
+   Compiling crossbeam-queue v0.3.14
+   Compiling spirv v0.4.0+sdk-1.4.341.0
+   Compiling assert_type_match v0.1.1
+   Compiling bevy_ptr v0.20.0
+   Compiling atomic-waker v1.1.2
+   Compiling raw-window-handle v0.6.2
+   Compiling mint v0.5.9
+   Compiling wgpu-types v30.0.1
+   Compiling glam v0.33.12
+   Compiling bevy_tasks v0.20.0
+   Compiling bevy_reflect v0.20.0
+   Compiling const-random-macro v0.1.16
+   Compiling naga v30.0.1
+   Compiling bevy_ecs_macros v0.20.0
+   Compiling slotmap v1.1.1
+   Compiling ash v0.38.0+1.3.281
+   Compiling crc32fast v1.5.2
+   Compiling miniz_oxide v0.9.1
+   Compiling dlib v0.5.3
+   Compiling fixedbitset v0.5.7
+   Compiling presser v0.3.1
+   Compiling bumpalo v3.20.3
+   Compiling nonmax v0.5.5
+   Compiling regex-syntax v0.8.11
+   Compiling regex-automata v0.4.18
+   Compiling gpu-allocator v0.28.0
+   Compiling bevy_ecs v0.20.0
+   Compiling wayland-sys v0.31.11
+   Compiling flate2 v1.1.10
+   Compiling wgpu-naga-bridge v30.0.1
+   Compiling const-random v0.1.18
+   Compiling khronos-egl v6.0.0
+   Compiling miniz_oxide v0.8.9
+   Compiling fdeflate v0.3.7
+   Compiling polycool v0.4.0
+   Compiling safe_arch v1.2.0
+   Compiling either v1.19.0
+   Compiling pxfm v0.1.30
+   Compiling rand_core v0.10.1
+   Compiling glow v0.17.0
+   Compiling renderdoc-sys v1.1.0
+   Compiling untrusted v0.9.0
+   Compiling zune-core v0.5.3
+   Compiling zeroize v1.9.1
+   Compiling rustls-pki-types v1.15.1
+   Compiling zune-jpeg v0.5.15
+   Compiling gltf-derive v1.4.1
+   Compiling ring v0.17.14
+   Compiling wgpu-hal v30.0.1
+   Compiling moxcms v0.8.1
+   Compiling wide v1.7.1
+   Compiling kurbo v0.13.1
+   Compiling png v0.18.1
+   Compiling ahash v0.8.12
+   Compiling matchers v0.2.0
+   Compiling sharded-slab v0.1.7
+   Compiling tracing-log v0.2.0
+   Compiling font-types v0.12.6
+   Compiling color v0.3.3
+   Compiling num-complex v0.4.6
+   Compiling num-integer v0.1.47
+   Compiling euclid v0.22.14
+   Compiling rawpointer v0.2.1
+   Compiling linebender_resource_handle v0.1.1
+   Compiling nu-ansi-term v0.50.3
+   Compiling byteorder-lite v0.1.0
+   Compiling guillotiere v0.7.0
+   Compiling image v0.25.10
+   Compiling tracing-subscriber v0.3.23
+   Compiling peniko v0.6.1
+   Compiling matrixmultiply v0.3.11
+   Compiling num-rational v0.4.2
+   Compiling simba v0.10.2
+   Compiling read-fonts v0.41.0
+   Compiling anyhow v1.0.104
+   Compiling wgpu-core-deps-windows-linux-android v30.0.1
+   Compiling gens-ecs v0.1.0 (/home/z/my-project/gens/crates/gens-ecs)
+   Compiling gltf-json v1.4.1
+   Compiling hash32 v0.3.1
+   Compiling nalgebra-macros v0.3.0
+   Compiling base64 v0.13.1
+   Compiling fearless_simd v0.4.1
+   Compiling urlencoding v2.1.3
+   Compiling cpufeatures v0.3.1
+   Compiling typenum v1.20.1
+   Compiling stable_deref_trait v1.2.1
+   Compiling heapless v0.8.0
+   Compiling nalgebra v0.35.0
+   Compiling vello_common v0.1.0
+   Compiling chacha20 v0.10.2
+   Compiling gltf v1.4.1
+   Compiling wgpu-core v30.0.1
+   Compiling getrandom v0.4.3
+   Compiling rustls-webpki v0.103.15
+   Compiling gens-animation v0.1.0 (/home/z/my-project/gens/crates/gens-animation)
+   Compiling socket2 v0.6.5
+   Compiling emath v0.36.2
+   Compiling time-core v0.1.9
+   Compiling num-conv v0.2.2
+   Compiling deranged v0.5.8
+   Compiling subtle v2.6.1
+   Compiling powerfmt v0.2.1
+   Compiling time v0.3.55
+   Compiling rustls v0.23.45
+   Compiling wgpu v30.0.1
+   Compiling ecolor v0.36.2
+   Compiling rand v0.10.3
+   Compiling glamx v0.3.1
+   Compiling vello_cpu v0.1.0
+   Compiling unicode-general-category v1.1.0
+   Compiling rstar v0.13.0
+   Compiling harfrust v0.12.0
+   Compiling skrifa v0.44.0
+   Compiling gens-core v0.1.0 (/home/z/my-project/gens/crates/gens-core)
+   Compiling rand_pcg v0.10.2
+   Compiling mio v1.2.4
+   Compiling ena v0.14.4
+   Compiling tokio-macros v2.7.2
+   Compiling num-derive v0.5.1
+   Compiling tinyvec v1.13.3
+   Compiling self_cell v1.3.0
+   Compiling lru-slab v0.1.3
+   Compiling uuid v1.28.0
+   Compiling nohash-hasher v0.2.0
+   Compiling bytes v1.12.1
+   Compiling pollster v1.0.1
+   Compiling base64 v0.23.1
+   Compiling epaint_default_fonts v0.36.2
+   Compiling quinn-proto v0.11.19
+   Compiling epaint v0.36.2
+   Compiling pem v4.0.0
+   Compiling accesskit v0.24.1
+   Compiling parry3d v0.31.1
+   Compiling tokio v1.53.2
+   Compiling smartstring v1.0.1
+   Compiling quinn-udp v0.5.16
+   Compiling yasna v0.6.0
+   Compiling gens-assets v0.1.0 (/home/z/my-project/gens/crates/gens-assets)
+   Compiling itertools v0.15.0
+   Compiling rhai_codegen v3.2.0
+   Compiling thin-vec v0.2.21
+   Compiling egui v0.36.2
+   Compiling rhai v1.26.1
+   Compiling rcgen v0.14.10
+   Compiling quinn v0.11.12
+   Compiling rapier3d v0.36.1
+   Compiling gens-renderer v0.1.0 (/home/z/my-project/gens/crates/gens-renderer)
+   Compiling gens-ui v0.1.0 (/home/z/my-project/gens/crates/gens-ui)
+   Compiling gens-scripting v0.1.0 (/home/z/my-project/gens/crates/gens-scripting)
+   Compiling gens-physics v0.1.0 (/home/z/my-project/gens/crates/gens-physics)
+   Compiling gens-networking v0.1.0 (/home/z/my-project/gens/crates/gens-networking)
+   Compiling gens-cinematics v0.1.0 (/home/z/my-project/gens/crates/gens-cinematics)
+   Compiling gens-profiler v0.1.0 (/home/z/my-project/gens/crates/gens-profiler)
+   Compiling gens-input v0.1.0 (/home/z/my-project/gens/crates/gens-input)
+   Compiling gens-worldgen v0.1.0 (/home/z/my-project/gens/crates/gens-worldgen)
+   Compiling gens-ai v0.1.0 (/home/z/my-project/gens/crates/gens-ai)
+   Compiling gens-runtime v0.1.0 (/home/z/my-project/gens/crates/gens-runtime)
+   Compiling gens-build v0.1.0 (/home/z/my-project/gens/crates/gens-build)
+   Compiling triple_buffer v9.0.0
+   Compiling rtrb v0.4.0
+   Compiling atomic-arena v0.1.2
+   Compiling kira v0.12.5
+   Compiling gens-editor v0.1.0 (/home/z/my-project/gens/crates/gens-editor)
+   Compiling gens-audio v0.1.0 (/home/z/my-project/gens/crates/gens-audio)
+   Compiling gens-plugin v0.1.0 (/home/z/my-project/gens/crates/gens-plugin)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 02s
+==> [5/18] cargo test
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.97s
+     Running unittests src/lib.rs (target/debug/deps/gens_ai-1434c7ccce1923cc)
+
+running 31 tests
+test bt::tests::action_writes_blackboard_for_downstream_nodes ... ok
+test bt::tests::blackboard_typed_round_trip ... ok
+test bt::tests::condition_maps_blackboard_predicate ... ok
+test bt::tests::inverter_flips_status_but_passes_running ... ok
+test bt::tests::guard_patrol_scenario_selector_with_memory ... ok
+test bt::tests::parallel_policy_all_and_any ... ok
+test bt::tests::repeat_runs_child_n_times_then_succeeds ... ok
+test bt::tests::same_tree_and_blackboard_replays_identically ... ok
+test bt::tests::selector_fails_when_every_child_fails ... ok
+test bt::tests::selector_takes_first_success_and_stops ... ok
+test bt::tests::sequence_has_memory_and_resumes_at_running_child ... ok
+test bt::tests::sequence_succeeds_only_when_all_children_succeed ... ok
+test bt::tests::wait_accumulates_dt_until_duration ... ok
+test nav::tests::arrive_decelerates_inside_slow_radius ... ok
+test nav::tests::blocked_endpoints_are_rejected ... ok
+test nav::tests::cell_centers_and_world_mapping_round_trip ... ok
+test nav::tests::eight_way_refuses_corner_cuts ... ok
+test nav::tests::eight_way_takes_the_diagonal_when_legal ... ok
+test nav::tests::flee_is_negated_seek ... ok
+test nav::tests::follow_path_stateless_semantics_are_documented ... ok
+test nav::tests::grid_defaults_are_walkable_cost_one ... ok
+test nav::tests::path_follower_traverses_forward_and_arrives ... ok
+test nav::tests::no_path_when_fully_walled_off ... ok
+test nav::tests::path_routes_around_a_wall ... ok
+test nav::tests::path_to_velocity_pipeline_is_deterministic ... ok
+test nav::tests::same_grid_same_path_deterministic_tiebreak ... ok
+test nav::tests::seek_is_full_speed_toward_target ... ok
+test nav::tests::set_cost_rejects_non_positive_and_nan ... ok
+test nav::tests::start_equals_goal_returns_single_cell ... ok
+test nav::tests::straight_line_four_way_path_is_manhattan_exact ... ok
+test nav::tests::weighted_cost_shifts_the_route ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_animation-93c7c0230f746f88)
+
+running 44 tests
+test blend::tests::blend_into_weight_zero_and_one_are_exact ... ok
+test blend::tests::blend_into_half_way_is_half_way ... ok
+test blend::tests::crossfade_endpoints_are_exact ... ok
+test blend::tests::slerp_rotation_helper_agrees_with_quat_slerp ... ok
+test blend::tests::crossfade_midpoint_blends_rotation_shortest_arc ... ok
+test clip::tests::clip_at_exact_duration_equals_last_key ... ok
+test clip::tests::clip_looped_wraps_time_and_is_deterministic ... ok
+test clip::tests::clip_rejects_non_positive_duration ... ok
+test clip::tests::clip_reports_joints_in_index_order ... ok
+test clip::tests::clip_scale_channel_applies_through_compose ... ok
+test clip::tests::clip_translation_sample_writes_only_target_joint ... ok
+test clip::tests::empty_tracks_sample_to_defaults ... ok
+test clip::tests::quat_track_quarter_point ... ok
+test clip::tests::quat_track_slerps_shortest_arc ... ok
+test clip::tests::vec_track_clamps_before_first_and_after_last ... ok
+test clip::tests::vec_track_linear_midpoint ... ok
+test clip::tests::vec_track_piecewise_across_three_keys ... ok
+test clip::tests::vec_track_rejects_duplicate_times ... ok
+test clip::tests::vec_track_sorts_unordered_input ... ok
+test clip::tests::vec_track_step_holds_left_value ... ok
+test controller::tests::condition_needs_parameter_to_hold ... ok
+test controller::tests::crossfade_blends_both_clips_half_way ... ok
+test controller::tests::crossfade_completes_and_switches ... ok
+test controller::tests::duplicate_state_rejected ... ok
+test controller::tests::first_added_transition_wins ... ok
+test controller::tests::first_state_is_initial ... ok
+test controller::tests::instant_transition_fires_on_condition ... ok
+test controller::tests::looping_clip_wraps_playback ... ok
+test controller::tests::non_looping_clip_clamps_at_duration ... ok
+test controller::tests::non_positive_or_nan_dt_changes_nothing ... ok
+test controller::tests::number_conditions_compare_numerically ... ok
+test controller::tests::same_sequence_replays_bit_identically ... ok
+test controller::tests::validation_rejects_bad_transitions_and_params ... ok
+test skeleton::tests::ancestor_chain_is_root_first ... ok
+test skeleton::tests::blend_half_way_between_translations ... ok
+test skeleton::tests::blend_identity_pose_scales_linearly ... ok
+test skeleton::tests::fk_batch_equals_per_joint_composition ... ok
+test skeleton::tests::fk_two_joint_chain_matches_hand_composition ... ok
+test skeleton::tests::identity_pose_composes_to_identity_matrix ... ok
+test skeleton::tests::joint_names_resolve_to_indices ... ok
+test skeleton::tests::parent_scale_scales_child_translation ... ok
+test skeleton::tests::skeleton_rejects_forward_or_self_parent ... ok
+test skeleton::tests::skeleton_rejects_parent_count_mismatch ... ok
+test skeleton::tests::translation_only_pose_keeps_axis_aligned_matrix ... ok
+
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_assets-32c1997696200e8f)
+
+running 34 tests
+test data::tests::canonical_json_is_deterministic_and_round_trips ... ok
+test data::tests::json_out_of_range_number_fails_at_parse_with_clear_error ... ok
+test data::tests::kind_change_for_existing_key_is_rejected ... ok
+test data::tests::parses_valid_document_with_defaults ... ok
+test data::tests::file_import_round_trip ... ok
+test data::tests::rejects_duplicate_entity_names ... ok
+test data::tests::rejects_empty_document_name ... ok
+test data::tests::registry_integration_identity_version_and_no_registration_on_invalid ... ok
+test data::tests::rejects_empty_entity_name_with_index ... ok
+test data::tests::rejects_empty_script_key_and_entry ... ok
+test data::tests::rejects_unsupported_version ... ok
+test data::tests::rejects_non_unit_rotation ... ok
+test data::tests::rejects_zero_scale ... ok
+test data::tests::tag_and_active_round_trip ... ok
+test data::tests::validate_rejects_non_finite_directly ... ok
+test hash::tests::pair_equals_concatenation ... ok
+test hash::tests::matches_published_vectors ... ok
+test hash::tests::single_bit_flip_changes_hash ... ok
+test mesh::tests::counts_and_bounds ... ok
+test mesh::tests::index_count_not_triangles_caught ... ok
+test mesh::tests::layer_mismatch_caught ... ok
+test mesh::tests::out_of_range_index_caught ... ok
+test mesh::tests::skinned_mesh_validates ... ok
+test registry::tests::changed_content_bumps_version ... ok
+test registry::tests::dot_slash_prefix_canonicalizes_then_empty_rejected ... ok
+test registry::tests::empty_content_rejected ... ok
+test registry::tests::first_import_is_version_one ... ok
+test registry::tests::id_is_fnv_of_key ... ok
+test registry::tests::invalid_keys_rejected ... ok
+test registry::tests::kind_change_is_rejected ... ok
+test registry::tests::iteration_is_id_ordered ... ok
+test registry::tests::kind_from_path_inference ... ok
+test registry::tests::unchanged_reimport_keeps_version ... ok
+test registry::tests::windows_separators_canonicalize ... ok
+
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/gltf_import.rs (target/debug/deps/gltf_import-d179440daa15c149)
+
+running 10 tests
+test clip_imports_bound_to_skin ... ok
+test clip_samples_linear_step_and_scale ... ok
+test cubic_spline_sampler_rejected ... ok
+test import_is_deterministic ... ok
+test matrix_node_rejected ... ok
+test missing_position_rejected ... ok
+test nodes_import_with_trs_and_links ... ok
+test morph_targets_rejected ... ok
+test skin_imports_as_skeleton_with_ibms ... ok
+test skinned_quad_mesh_imports ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_audio-4f9ceb2fbfa66124)
+
+running 10 tests
+test tests::default_sample_rate_contract ... ok
+test tests::new_sound_is_playing_and_advances_with_process ... ok
+test tests::one_shot_sound_stops_at_end ... ok
+test tests::looping_sound_never_stops ... ok
+test tests::per_sound_volume_and_panning_settings_are_accepted ... ok
+test tests::pause_resume_stop_state_machine ... ok
+test tone::tests::sine_amplitude_follows_rms_contract ... ok
+test tone::tests::sine_first_sample_is_zero_and_rises ... ok
+test tone::tests::sine_has_exact_frame_count_and_duration ... ok
+test tests::stopped_sounds_stay_stopped_but_others_keep_playing ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_build-a0d41a31114fd6d4)
+
+running 18 tests
+test package::tests::bad_magic_is_loud ... ok
+test package::tests::corrupt_content_is_caught_by_the_trailer_hash ... ok
+test package::tests::corrupt_manifest_is_caught_loudly ... ok
+test package::tests::duplicate_keys_and_collisions_are_rejected ... ok
+test package::tests::empty_and_noncanonical_keys_are_rejected ... ok
+test package::tests::build_verify_roundtrip_is_exact ... ok
+test package::tests::file_hash_mismatch_is_caught_per_file ... ok
+test package::tests::parse_kind_covers_every_variant ... ok
+test package::tests::invalid_scene_never_becomes_a_package ... ok
+test package::tests::truncated_package_is_caught ... ok
+test player::tests::corrupt_package_fails_the_load_loudly ... ok
+test package::tests::unsupported_future_version_is_rejected ... ok
+test player::tests::load_imports_everything_and_propagates ... ok
+test player::tests::disabled_profiler_run_still_works ... ok
+test player::tests::run_moves_the_entity_and_validates_clean ... ok
+test player::tests::script_that_fails_to_compile_is_a_loud_load_error ... ok
+test player::tests::run_report_is_complete_and_tagged ... ok
+test player::tests::two_runs_are_simulation_identical ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running unittests src/bin/gens-pkg.rs (target/debug/deps/gens_pkg-35bd32f45cc68c29)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/gens-player.rs (target/debug/deps/gens_player-cf15988ba961b518)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_cinematics-9f7f9dd465c8a2c8)
+
+running 41 tests
+test document::tests::format_tag_is_enforced ... ok
+test document::tests::load_rejects_duplicate_key_times ... ok
+test document::tests::canonical_form_and_hash_are_stable ... ok
+test document::tests::load_rejects_event_outside_window ... ok
+test document::tests::load_rejects_non_finite_key_bits ... ok
+test document::tests::load_rejects_kind_mismatch ... ok
+test document::tests::malformed_bits_are_typed_errors ... ok
+test document::tests::pretty_form_roundtrips_equally ... ok
+test document::tests::roundtrip_preserves_every_bit ... ok
+test player::tests::advance_on_idle_is_noop ... ok
+test player::tests::events_fire_once_on_half_open_windows ... ok
+test player::tests::loop_wraps_and_fires_tail_then_head ... ok
+test player::tests::negative_and_non_finite_delta_are_loud ... ok
+test player::tests::once_finishes_clamped_at_duration ... ok
+test player::tests::pathological_delta_fires_every_cycle ... ok
+test player::tests::play_after_finish_restarts_from_zero ... ok
+test player::tests::pause_holds_and_play_resumes ... ok
+test player::tests::seek_is_exact_and_validated ... ok
+test player::tests::speed_scales_traversal_deterministically ... ok
+test player::tests::speed_zero_and_non_finite_rejected ... ok
+test player::tests::stop_resets_to_idle ... ok
+test timeline::tests::builds_a_valid_timeline ... ok
+test timeline::tests::camera_intent_round_trips ... ok
+test timeline::tests::events_between_is_half_open ... ok
+test timeline::tests::events_sort_by_time_stably ... ok
+test timeline::tests::rejects_duplicate_and_kind_mismatch ... ok
+test timeline::tests::rejects_events_outside_or_zero ... ok
+test timeline::tests::rejects_invalid_duration_and_empty ... ok
+test timeline::tests::rejects_keys_outside_duration ... ok
+test timeline::tests::sample_all_covers_every_track_in_order ... ok
+test track::tests::clamps_at_both_ends ... ok
+test track::tests::construction_rejects_empty_duplicate_and_unsorted ... ok
+test track::tests::construction_rejects_non_finite_values ... ok
+test track::tests::input_order_does_not_matter ... ok
+test track::tests::linear_midpoint_is_exact ... ok
+test track::tests::quat_slerp_midpoint_rotates_halfway ... ok
+test track::tests::sampling_is_stateless_and_repeatable ... ok
+test track::tests::smoothstep_eases_but_matches_keys ... ok
+test track::tests::step_holds_left_value ... ok
+test track::tests::vec3_midpoint_is_exact ... ok
+test track::tests::vec3_track_validates_each_component ... ok
+
+test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_core-df5ac0e60a94f823)
+
+running 22 tests
+test error::tests::io_errors_convert_transparently ... ok
+test error::tests::display_messages_are_actionable ... ok
+test events::tests::drain_preserves_send_order_and_empties_queue ... ok
+test events::tests::events_default_and_empty_state ... ok
+test events::tests::partially_consumed_drain_does_not_leak_into_next_frame ... ok
+test events::tests::registry_isolates_event_types ... ok
+test events::tests::registry_register_is_idempotent_and_send_is_convenient ... ok
+test events::tests::sends_during_drain_arrive_on_next_drain ... ok
+test game_loop::tests::alpha_reflects_partial_step ... ok
+test game_loop::tests::hitch_drops_backlog_instead_of_spiraling ... ok
+test game_loop::tests::multiple_steps_on_large_delta ... ok
+test game_loop::tests::negative_delta_is_ignored ... ok
+test game_loop::tests::one_step_per_exact_delta ... ok
+test game_loop::tests::run_frame_drives_clock_and_closure ... ok
+test game_loop::tests::zero_time_scale_pauses_simulation_but_not_frames ... ok
+test logging::tests::filter_parse_errors_are_reported ... ok
+test time::tests::clock_counts_frames_and_elapsed ... ok
+test time::tests::fixed_source_is_exact_and_monotonic ... ok
+test time::tests::negative_scale_clamps_to_zero ... ok
+test time::tests::time_scale_multiplies_delta ... ok
+test time::tests::zero_scale_pauses_game_time_but_not_frame_count ... ok
+test logging::tests::init_installs_subscriber_once ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_ecs-9ee4de7ac5b14121)
+
+running 14 tests
+test components::tests::tag_new_wraps_string ... ok
+test components::tests::name_display_and_accessors ... ok
+test components::tests::transform_builders_chain ... ok
+test components::tests::transform_to_matrix_matches_compose_trs ... ok
+test components::tests::world_transform_position_reads_w_axis ... ok
+test hierarchy::tests::parent_world_position_falls_back_to_identity ... ok
+test hierarchy::tests::attach_and_detach_maintain_children ... ok
+test propagation::tests::child_composes_parent_times_local ... ok
+test hierarchy::tests::schedules_run_propagation_after_update ... ok
+test propagation::tests::entities_without_transform_are_traversed_but_identity ... ok
+test propagation::tests::moving_parent_repropagates_children_next_run ... ok
+test propagation::tests::deep_hierarchy_in_one_run ... ok
+test propagation::tests::root_world_transform_equals_local ... ok
+test propagation::tests::three_levels_compose_in_order ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_editor-9d15b593e81d6935)
+
+running 41 tests
+test assets::tests::display_name_takes_the_file_name ... ok
+test assets::tests::size_formatting_is_deterministic ... ok
+test assets::tests::folders_are_sorted_and_unique ... ok
+test cinema::tests::animator_empty_state_when_no_cinematic ... ok
+test cinema::tests::animator_layout_places_track_rows_in_columns ... ok
+test commands::tests::clear_empties_the_ring ... ok
+test commands::tests::drain_executes_every_queued_command_in_order ... ok
+test commands::tests::help_entities_stats_are_recognized_and_speak ... ok
+test commands::tests::unknown_command_is_loud_and_reports_false ... ok
+test commands::tests::validate_reports_clean_world_and_real_violations ... ok
+test console::flow_tests::command_row_captures_rects_and_queues_real_intents ... ok
+ INFO gens_editor::console::flow_tests: engine initialized
+ INFO gens_editor::console::flow_tests: physics initialized: rapier3d
+test cinema::tests::network_tab_renders_snapshot_and_empty_state ... ok
+test console::flow_tests::console_survives_frame_take_dance ... ok
+test console::paint_tests::console_panel_tessellates_captured_lines ... ok
+test console::tests::ring_capacity_evicts_oldest_and_counts ... ok
+test console::tests::severity_colors_map_deterministically ... ok
+test console::tests::sink_captures_engine_events ... ok
+test hierarchy::tests::componentless_entities_are_filtered ... ok
+test hierarchy::tests::expansion_flattens_children ... ok
+test hierarchy::tests::search_keeps_matches_and_ancestors ... ok
+test hierarchy::tests::tree_reflects_real_relations ... ok
+test hierarchy::tests::visibility_maps_active_component ... ok
+test inspector::tests::authored_body_edits_reach_the_world ... ok
+test inspector::tests::euler_roundtrip_is_stable ... ok
+test inspector::tests::mesh_tint_edits_reach_the_world ... ok
+test inspector::tests::set_transform_writes_real_components ... ok
+test model::tests::authored_body_defaults_match_physics_defaults ... ok
+test model::tests::shape_kind_labels_are_stable ... ok
+test console::flow_tests::profiler_tab_paints_phase_table_when_telemetry_present ... ok
+test shell::shell_tests::bottom_dock_columns_place_console_content_correctly ... ok
+test telemetry::tests::aggregates_median_max_and_share ... ok
+test telemetry::tests::disabled_profiler_gives_honest_no_data ... ok
+test telemetry::tests::real_profiler_history_flows_through ... ok
+test telemetry::tests::status_summary_formats_cpu_and_memory ... ok
+test telemetry::tests::update_from_limits_to_the_last_n_frames ... ok
+test theme::tests::theme_is_deterministic ... ok
+test viewport::tests::collect_draws_are_deterministic_and_marked ... ok
+test viewport::tests::orbit_eye_stays_on_the_sphere ... ok
+test viewport::tests::project_maps_target_to_rect_center ... ok
+test viewport::tests::tint_multiplies_through_srgb_decode ... ignored, GPU test — executed by CI on adapter-backed OSes (ADR-0011)
+test shell::shell_tests::status_bar_shows_telemetry_summary_only_when_present ... ok
+
+test result: ok. 40 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.39s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_input-f8a9d70374379e2a)
+
+running 9 tests
+test state::tests::clear_all_releases_everything ... ok
+test state::tests::axis_from_opposing_actions ... ok
+test state::tests::key_edges_rotate_at_update ... ok
+test state::tests::key_repeat_does_not_retrigger_just_pressed ... ok
+test state::tests::key_up_without_down_is_ignored ... ok
+test state::tests::mouse_buttons_and_movement ... ok
+test state::tests::multiple_bindings_are_or_combined ... ok
+test state::tests::press_and_release_within_one_frame_is_visible ... ok
+test state::tests::rebinding_supports_unbind_and_clear ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_math-4207e6fafd66e7d1)
+
+running 12 tests
+test tests::aabb_contains_and_intersects ... ok
+test tests::aabb_new_normalizes_corners ... ok
+test tests::aabb_union_and_expand ... ok
+test tests::angle_conversions_round_trip ... ok
+test tests::compose_trs_matches_manual_composition ... ok
+test tests::damp_guards ... ok
+test tests::damp_is_framerate_independent ... ok
+test tests::epsilon_comparison_across_magnitudes ... ok
+test tests::inverse_lerp_and_remap ... ok
+test tests::lerp_hits_endpoints_and_midpoint ... ok
+test tests::projections_emit_webgpu_ndc_depth ... ok
+test tests::rotation_submatrix_drops_translation ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_networking-a7155f48b90ff0f1)
+
+running 18 tests
+test cert::tests::generates_parsable_certificate_and_key ... ok
+test cert::tests::two_generations_are_independent ... ok
+test session::tests::envelope_layout_is_exact ... ok
+test session::tests::envelope_payload_hash_mismatch_is_loud ... ok
+test cert::tests::configs_build_from_the_same_certificate ... ok
+test session::tests::envelope_rejects_unknown_kind_and_bad_lengths ... ok
+test session::tests::envelope_round_trips_all_kinds ... ok
+test session::tests::envelope_payload_size_limits ... ok
+test session::tests::session_handshake_and_messages_over_loopback ... ok
+test session::tests::session_rejects_version_mismatch ... ok
+test transport::tests::corrupt_frame_is_detected_with_hashes ... ok
+test transport::tests::frame_layout_is_exact ... ok
+test transport::tests::close_is_observed_by_the_peer ... ok
+test transport::tests::loopback_send_recv_both_directions ... ok
+test transport::tests::oversized_length_prefix_is_rejected_before_allocation ... ok
+test transport::tests::one_mebibyte_payload_round_trips ... ok
+test transport::tests::recv_timeout_fires_when_peer_is_silent ... ok
+test transport::tests::send_over_max_frame_size_is_rejected_locally ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.08s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_physics-8bb2b2e6067edf4d)
+
+running 14 tests
+test convert::tests::rapier_vector_is_three_component_f32 ... ok
+test convert::tests::vectors_round_trip_component_wise ... ok
+test convert::tests::quaternions_round_trip_component_wise ... ok
+test ecs::tests::solver_driven_classification ... ok
+test ecs::tests::sync_respects_scale_and_only_overwrites_pose ... ok
+test ecs::tests::dynamic_body_drives_transform_fixed_body_does_not ... ok
+test world::tests::body_exists_distinguishes_live_and_stale_handles ... ok
+test world::tests::free_fall_matches_newtonian_kinematics ... ok
+test world::tests::gravity_and_counts_readback ... ok
+test world::tests::impulse_changes_velocity_and_respects_mass ... ok
+test world::tests::kinematic_body_teleports_and_reads_back_kind ... ok
+test world::tests::ball_rests_on_floor ... ok
+test world::tests::timestep_guard_rejects_non_positive ... ok
+test world::tests::same_process_runs_are_bit_identical ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_plugin-d3c0608cbc2d30b7)
+
+running 3 tests
+test registry::tests::applies_in_registration_order ... ok
+test registry::tests::rejects_duplicate_and_empty_names ... ok
+test registry::tests::failed_build_names_the_failure_and_keeps_earlier_work ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_profiler-3cb990d62d73b5f6)
+
+running 22 tests
+test memory::tests::counters_move_and_format_is_stable ... ok
+test memory::tests::peak_dominates_every_prior_current_read ... ok
+test memory::tests::snapshot_serializes_with_format_tag ... ok
+test memory::tests::vec_growth_exercises_realloc_path ... ok
+test report::tests::aggregation_sums_counts_and_frames_present ... ok
+test report::tests::empty_history_gives_empty_report ... ok
+test report::tests::json_is_byte_stable_and_complete ... ok
+test report::tests::orphan_flags_aggregate_regardless ... ok
+test report::tests::percentile_convention_on_100_samples ... ok
+test report::tests::percentile_convention_on_single_sample ... ok
+test memory::tests::allocating_increases_lifetime_totals_and_counts ... ok
+test report::tests::report_is_order_independent_over_the_same_multiset ... ok
+test spans::tests::begin_frame_auto_completes_a_still_open_frame ... ok
+test spans::tests::disabled_profiler_is_a_no_op ... ok
+test spans::tests::history_cap_is_respected ... ok
+test spans::tests::durations_are_positive_for_real_work ... ok
+test spans::tests::out_of_order_end_flags_orphans ... ok
+test spans::tests::nesting_records_depth_parent_and_order ... ok
+test spans::tests::span_outside_frame_is_ignored ... ok
+test spans::tests::take_history_clears ... ok
+test spans::tests::time_closure_wraps_and_returns ... ok
+test spans::tests::span_cap_sets_overflowed_and_bounds_memory ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_renderer-1c0c37831e5e5230)
+
+running 36 tests
+test camera::tests::orthographic_2d_maps_screen_corners_to_ndc ... ok
+test camera::tests::camera_uniform_is_64_bytes_matching_wgsl_layout ... ok
+test camera::tests::perspective_view_places_eye_at_origin_and_target_ahead ... ok
+test camera::tests::perspective_frustum_edges_map_to_ndc_unit_square ... ok
+test camera::tests::view_proj_composes_projection_over_view ... ok
+test context::tests::class_ordering_matches_adr_policy ... ok
+test context::tests::gpu_context_reports_and_creates_device ... ignored, requires a GPU adapter (real or software)
+test context::tests::selection_is_empty_safe ... ok
+test context::tests::classify_maps_every_device_type ... ok
+test context::tests::selection_keeps_first_on_tie ... ok
+test context::tests::selection_prefers_discrete_over_everything ... ok
+test context::tests::selection_prefers_integrated_over_software ... ok
+test mesh::tests::cube_is_well_formed_with_six_colored_faces ... ok
+test mesh::tests::index_bytes_are_two_bytes_each ... ok
+test mesh::tests::quad_is_ccw_and_covers_unit_square ... ok
+test mesh::tests::triangle_is_ccw_from_positive_z ... ok
+test mesh::tests::vertex_bytes_round_trip ... ok
+test mesh::tests::vertex_layout_matches_struct_exactly ... ok
+test renderer::clear_color_tests::clear_color_round_trips_through_srgb ... ok
+test renderer::tests::colored_triangle_renders_with_interpolation ... ignored, requires a GPU adapter (real or software)
+test renderer::tests::model_matrices_and_depth_are_draw_order_independent ... ignored, requires a GPU adapter (real or software)
+test renderer::tests::textured_quad_samples_texels_at_corners ... ignored, requires a GPU adapter (real or software)
+test resources::tests::mesh_draw_payload_matches_counts ... ok
+test resources::tests::slot_offsets_are_256_byte_aligned_and_bounded ... ok
+test target::tests::bytes_per_row_aligns_to_256 ... ok
+test target::tests::bytes_per_row_rejects_overflow ... ok
+test target::tests::offscreen_clear_round_trip ... ignored, requires a GPU adapter (real or software)
+test target::tests::unpack_rejects_short_buffer ... ok
+test target::tests::unpack_strips_row_padding ... ok
+test target::tests::zero_size_target_is_rejected ... ignored, requires a GPU adapter (real or software)
+test texture::tests::validation_enforces_length_contract ... ok
+test ui::tests::batch_validation_rejects_out_of_range_indices ... ok
+test ui::tests::ndc_conversion_hits_all_four_corners ... ok
+test ui::tests::opaque_premultiplied_srgb_round_trips_through_the_target ... ok
+test ui::tests::vertex_bytes_round_trip ... ok
+test mesh::tests::validate_catches_bad_indices ... ok
+
+test result: ok. 30 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_runtime-647fbe26f96aa443)
+
+running 44 tests
+test cinematic::tests::fades_come_back_in_the_outcome ... ok
+test cinematic::tests::fov_writes_camera_pose ... ok
+test cinematic::tests::idle_players_apply_nothing ... ok
+test cinematic::tests::unbound_targets_are_loud ... ok
+test cinematic::tests::writes_transform_channels_into_bound_entities ... ok
+test data::tests::empty_document_spawns_nothing ... ok
+test data::tests::programmatically_invalid_document_is_refused ... ok
+test data::tests::data_document_and_save_round_trip_agree ... ok
+test data::tests::same_document_two_fresh_worlds_capture_byte_identically ... ok
+test data::tests::script_vars_iteration_is_sorted_into_the_save ... ok
+test data::tests::spawns_entities_with_expected_components_in_order ... ok
+test debug::tests::bevy_rejects_relationships_to_unspawned_entities - should panic ... ok
+test debug::tests::clean_world_validates_empty ... ok
+test debug::tests::dump_json_is_stable_and_tagged ... ok
+test debug::tests::duplicate_names_are_caught_for_every_holder ... ok
+test debug::tests::dump_lists_identity_components_and_hierarchy ... ok
+test debug::tests::missing_world_transform_is_caught ... ok
+test debug::tests::non_finite_transform_is_caught_per_field ... ok
+test debug::tests::missing_physics_body_is_caught_when_physics_resource_present ... ok
+test debug::tests::non_unit_rotation_is_caught ... ok
+test debug::tests::unregistered_script_key_is_caught_only_with_a_registry ... ok
+test debug::tests::zero_scale_is_caught ... ok
+test net::tests::unexpected_kind_is_loud ... ok
+test profile::tests::bundle_helper_spawns_visible_components ... ok
+test profile::tests::bundle_trait_in_scope ... ok
+test profile::tests::hash_is_sensitive_to_every_observed_dimension ... ok
+test net::tests::snapshot_round_trips_over_loopback_session ... ok
+test profile::tests::hash_is_stable_for_identical_worlds ... ok
+test profile::tests::instrumented_frame_records_both_spans ... ok
+test profile::tests::instrumented_frame_with_disabled_profiler_still_runs ... ok
+test save::tests::bad_magic_is_rejected ... ok
+test save::tests::corrupt_body_is_rejected ... ok
+test save::tests::entity_order_is_index_sorted ... ok
+test save::tests::file_framing_and_hash_verification ... ok
+test save::tests::future_version_is_rejected ... ok
+test save::tests::atomic_write_leaves_no_tmp_and_roundtrips ... ok
+test save::tests::roundtrip_restores_all_components ... ok
+test save::tests::save_is_byte_deterministic ... ok
+test snapshot::tests::fill_and_stroke_rect_set_expected_pixels ... ok
+test snapshot::tests::grid_draws_lines_at_step_intervals ... ok
+test snapshot::tests::png_encoding_produces_png_signature ... ok
+test snapshot::tests::px_is_bounds_safe ... ok
+test save::tests::world_transform_is_never_saved ... ok
+test snapshot::tests::text_draws_known_glyph_and_skips_unknown ... ok
+
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+
+     Running tests/final_integration.rs (target/debug/deps/final_integration-a5daf779a29c48cb)
+
+running 2 tests
+test checkpoint_time_is_exact_accumulated_f32 ... ok
+test cross_pillar_composition_replays_and_restores_byte_identically ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_scripting-0ff6476ca20623da)
+
+running 22 tests
+test engine::tests::compile_error_reports_diagnostics ... ok
+test engine::tests::compiles_and_calls ... ok
+test engine::tests::no_module_import_in_sandbox ... ok
+test engine::tests::no_print_function_in_sandbox ... ok
+test engine::tests::deterministic_replay_of_traced_calls ... ok
+test engine::tests::runaway_recursion_hits_call_level_limit ... ok
+test engine::tests::runtime_missing_function_errors ... ok
+test engine::tests::scope_roundtrip_with_vars_bag ... ok
+test engine::tests::script_maps_are_ordered_and_cloneable ... ok
+test host::tests::anim_requests_are_recorded ... ok
+test host::tests::entity_tick_order_is_index_sorted ... ok
+test engine::tests::runaway_loop_hits_operation_limit ... ok
+test host::tests::failing_script_leaves_entity_untouched ... ok
+test host::tests::math_vocabulary_works_and_is_deterministic ... ok
+test host::tests::missing_script_skips_entity ... ok
+test host::tests::scripts_move_entities_and_persist_vars ... ok
+test vars::tests::iteration_is_name_sorted ... ok
+test vars::tests::json_roundtrip_is_stable ... ok
+test vars::tests::kind_conflicts_rejected ... ok
+test vars::tests::set_get_roundtrip ... ok
+test vars::tests::typed_access_defaults ... ok
+test host::tests::execution_is_deterministic_across_runs ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_ui-9cde98a4bb22835e)
+
+running 10 tests
+test backend::tests::ui_hover_changes_pixels_under_pointer ... ignored, needs a GPU adapter (CI: lavapipe/Metal)
+test backend::tests::ui_paints_panel_text_and_button ... ignored, needs a GPU adapter (CI: lavapipe/Metal)
+test backend::tests::scissor_clamps_to_target_and_floor_or_ceils ... ok
+test context::tests::first_pass_uploads_font_atlas ... ok
+test context::tests::button_clicks_through_synthetic_pointer ... ok
+test context::tests::label_paints_nonempty_mesh ... ok
+test context::tests::partial_font_delta_patches_the_mirror ... ok
+test context::tests::pointer_away_does_not_click ... ok
+test context::tests::scroll_and_text_events_are_accepted ... ok
+test context::tests::same_input_sequence_replays_identical_frames ... ok
+
+test result: ok. 8 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running unittests src/lib.rs (target/debug/deps/gens_worldgen-9bd85116db576fd8)
+
+running 29 tests
+test chunk::tests::coord_of_follows_floor_semantics ... ok
+test chunk::tests::neighboring_chunks_agree_on_the_shared_edge ... ok
+test chunk::tests::scatter_lands_on_the_terrain ... ok
+test chunk::tests::validates_configuration ... ok
+test chunk::tests::generation_is_pure_in_coord ... ok
+test heightfield::tests::flat_mesh_has_up_normals_and_valid_indexing ... ok
+test heightfield::tests::mesh_hash_is_content_addressed ... ok
+test heightfield::tests::rejects_non_finite_sampler_output ... ok
+test heightfield::tests::row_major_layout_and_world_positions ... ok
+test heightfield::tests::validates_dimensions_and_cell_size ... ok
+test noise::tests::different_seeds_differ ... ok
+test heightfield::tests::normals_are_unit_length_on_slopes ... ok
+test noise::tests::fbm_validates_parameters ... ok
+test noise::tests::fbm_is_bounded_deterministic_and_octave_sensitive ... ok
+test noise::tests::lattice_values_are_the_interpolation_endpoints ... ok
+test noise::tests::same_seed_same_output_any_order ... ok
+test noise::tests::value_noise_is_bounded_and_continuous ... ok
+test noise::tests::hash_cell_is_uniform_and_in_range ... ok
+test scatter::tests::cell_coordinates_are_unique_and_tracked ... ok
+test scatter::tests::height_closure_lifts_points ... ok
+test scatter::tests::placement_is_order_independent ... ok
+test scatter::tests::points_stay_inside_the_region ... ok
+test scatter::tests::threshold_is_monotone ... ok
+test scatter::tests::validates_region_cell_and_threshold ... ok
+test streaming::tests::crossing_a_boundary_unloads_and_loads_sorted ... ok
+test streaming::tests::first_update_loads_the_whole_disc_sorted ... ok
+test streaming::tests::negative_radius_clamps_to_zero ... ok
+test streaming::tests::radius_zero_loads_only_the_focus ... ok
+test streaming::tests::focus_sequence_determinism ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_ai
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_animation
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_assets
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_audio
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_build
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_cinematics
+
+running 1 test
+test crates/gens-cinematics/src/document.rs - document::to_canonical_json (line 236) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 0.19s; merged doctests compilation took 0.19s
+   Doc-tests gens_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_ecs
+
+running 1 test
+test crates/gens-ecs/src/prelude.rs - prelude (line 3) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 0.29s; merged doctests compilation took 0.29s
+   Doc-tests gens_editor
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_input
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_math
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_networking
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_physics
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_plugin
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_profiler
+
+running 1 test
+test crates/gens-profiler/src/spans.rs - spans::Profiler (line 81) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 0.16s; merged doctests compilation took 0.16s
+   Doc-tests gens_renderer
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_runtime
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_scripting
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_ui
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests gens_worldgen
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+==> [6/18] physics smoke (input -> physics -> ECS replay, CPU-only, deterministic)
+2026-10-13T01:11:48.976231Z  INFO Gens engine - physics hello world
+2026-10-13T01:11:48.976268Z  INFO run configuration steps=600 out="/tmp/gens_verify_physics.json" filter=info
+2026-10-13T01:11:49.253835Z  INFO determinism: two runs bit-identical samples=600
+2026-10-13T01:11:49.253932Z  INFO physics hello verification passed final_x=7.905011177062988 final_y=0.49992436170578003 peak_y=1.2295167446136475 min_y=0.46336472034454346
+2026-10-13T01:11:49.254474Z  INFO trajectory written out="/tmp/gens_verify_physics.json"
+physics smoke: 29290 bytes of trajectory evidence
+==> [7/18] animation+AI+UI smoke (BT -> animation -> ECS -> egui layout replay)
+2026-10-13T01:11:50.533652Z  INFO Gens engine - animation + AI + UI hello world
+2026-10-13T01:11:50.533686Z  INFO run configuration steps=900 out="/tmp/gens_verify_animate.json" filter=info
+2026-10-13T01:11:51.381831Z  INFO determinism: two runs bit-identical samples=45
+2026-10-13T01:11:51.381898Z  INFO animate hello verification passed min_x=1.5 max_x=10.5 walked_distance=24.566692352294922 samples=45
+2026-10-13T01:11:51.382352Z  INFO trajectory evidence written out="/tmp/gens_verify_animate.json" bytes=4100
+animate smoke: 4100 bytes of trajectory evidence
+==> [8/18] assets+scripting+save smoke (glTF -> Rhai script -> save/load replay, CPU-only)
+2026-10-13T01:11:52.578003Z  INFO asset models/walker.gltf = asset:cb956b967c5b5631 (v1, 4057 B); scripts/patrol.rhai = asset:34c08bcb0d81d254 (v1, 1501 B)
+2026-10-13T01:11:52.706725Z  INFO asset models/walker.gltf = asset:cb956b967c5b5631 (v1, 4057 B); scripts/patrol.rhai = asset:34c08bcb0d81d254 (v1, 1501 B)
+2026-10-13T01:11:52.771812Z  INFO saved world at step 600 (464 B) -> /tmp/gens_asset_script_save.bin
+2026-10-13T01:11:52.771891Z  INFO asset models/walker.gltf = asset:cb956b967c5b5631 (v1, 4057 B); scripts/patrol.rhai = asset:34c08bcb0d81d254 (v1, 1501 B)
+2026-10-13T01:11:52.839335Z  INFO asset_script_hello: 1200 steps, 60 samples, save/load bit-identical, x span 7.997, max wp 3, evidence /tmp/gens_verify_asset_script.json
+asset+script smoke: 30064 bytes of save/load replay evidence
+==> [9/18] networking smoke (data document -> QUIC session -> world replication, loopback only)
+2026-10-13T01:11:54.097957Z  INFO scene scenes/net-demo.json = 553b646e2193860d (705 B)
+2026-10-13T01:11:54.101760Z  INFO host: session 1 established
+2026-10-13T01:11:54.101960Z  INFO client: session 1 established
+2026-10-13T01:11:54.130703Z  INFO host: world replicated at step 300 (544 B payload)
+2026-10-13T01:11:54.131093Z  INFO client: snapshot for tick 300 received
+2026-10-13T01:11:54.417625Z  INFO net_hello: steps 600, replicated at 300, snapshot 544 B, host/client captures IDENTICAL, client ticks 600, evidence -> /tmp/gens_verify_net.json (1571 B)
+net smoke: 1571 bytes of replication evidence
+==> [10/18] GPU smoke (offscreen wgpu render; skips honestly without an adapter)
+2026-10-13T01:11:56.031173Z  INFO Gens engine - GPU hello world
+2026-10-13T01:11:56.031214Z  INFO run configuration frames=60 out="/tmp/gens_verify_gpu.png" width=320 height=180 filter=info allow_no_gpu=true
+2026-10-13T01:11:56.032641Z ERROR GENERAL [Loader Message (0x0)]
+	vkCreateInstance: Found no drivers!
+2026-10-13T01:11:56.032695Z ERROR 	objects: (type: INSTANCE, hndl: 0x563cee55c780, name: ?)
+GPU-SKIP: no usable GPU adapter on this machine (invalid state in renderer: no GPU adapter found (backends Backends(NOOP | VULKAN | GL | METAL | DX12 | BROWSER_WEBGPU)). On headless CI machines install a software Vulkan driver, e.g. `apt-get install mesa-vulkan-drivers` (lavapipe))
+gpu smoke: GPU-SKIP (no adapter here; CI renders on Linux/macOS)
+==> [11/18] editor example build (the example itself needs an adapter; CI renders it)
+editor example: built (GPU render proven in CI on Linux/macOS)
+==> [12/18] profiler smoke (observation-only proof + phase timings + memory, CPU-only)
+2026-10-13T01:12:00.616079Z  INFO Gens engine - profiler hello (ADR-0027 observation-only proof)
+2026-10-13T01:12:00.616133Z  INFO run configuration steps=600 out="/tmp/gens_verify_profile.json" filter=info
+2026-10-13T01:12:01.147531Z  INFO determinism: profiler-off and profiler-on runs byte-identical steps=600
+2026-10-13T01:12:01.148851Z  INFO final world validates clean entities=6
+2026-10-13T01:12:01.149153Z  INFO profiler hello evidence written bytes=1451 path=/tmp/gens_verify_profile.json
+profiler smoke: 1451 bytes of ADR-0027 proof evidence
+==> [13/18] cinematic smoke (ADR-0030 replay + seek-equivalence proof, CPU-only)
+2026-10-13T01:12:02.348683Z  INFO Gens engine - cinematic replay proof (ADR-0030)
+2026-10-13T01:12:02.348740Z  INFO run configuration steps=300 seek_at=60 out="/tmp/gens_verify_cinematic.json" filter=info
+2026-10-13T01:12:02.351085Z  INFO cinematic event fired step=30 event=title-card
+2026-10-13T01:12:02.355423Z  INFO cinematic event fired step=121 event=act-two
+2026-10-13T01:12:02.359725Z  INFO cinematic event fired step=211 event=credits
+2026-10-13T01:12:02.363538Z  INFO run A complete; seek target pinned to its exact internal time seek_at=60 seek_target=0.9999997019767761 bits="3f7ffffb"
+2026-10-13T01:12:02.365610Z  INFO cinematic event fired step=30 event=title-card
+2026-10-13T01:12:02.369885Z  INFO cinematic event fired step=121 event=act-two
+2026-10-13T01:12:02.374071Z  INFO cinematic event fired step=211 event=credits
+2026-10-13T01:12:02.381263Z  INFO cinematic event fired step=61 event=act-two
+2026-10-13T01:12:02.385581Z  INFO cinematic event fired step=151 event=credits
+2026-10-13T01:12:02.389700Z  INFO cinematic replay proof complete (replay identical, seek equivalent) steps=300 seek_at=60 final_hash=65aeb0df029f4582
+cinematic proof written to /tmp/gens_verify_cinematic.json
+cinematic smoke: 1918 bytes of replay-proof evidence
+==> [14/18] worldgen smoke (ADR-0031 order/streaming/restart proofs, CPU-only)
+2026-10-13T01:12:03.586464Z  INFO Gens engine - worldgen streaming proof (ADR-0031)
+2026-10-13T01:12:03.586500Z  INFO run configuration steps=300 out="/tmp/gens_verify_worldgen.json" filter=info
+2026-10-13T01:12:04.813842Z  INFO worldgen streaming proof complete (order-independent, streaming- and restart-identical) steps=300 final_hash=2744eab1fe1f5a53
+worldgen proof written to /tmp/gens_verify_worldgen.json
+worldgen smoke: 2252 bytes of generation evidence
+==> [15/18] plugin smoke (ADR-0032 out-of-tree downstream proof, CPU-only)
+plugin proof written to /tmp/gens_verify_plugin.json (orb position bits: ["bf9fccca", "3f800000", "402e95d0"])
+plugin smoke: 686 bytes of API evidence
+==> [16/18] build-pipeline smoke (package build -> verify -> headless player run, CPU-only)
+2026-10-13T01:12:06.429843Z  INFO Gens engine - build pipeline hello (package -> verify -> player)
+2026-10-13T01:12:06.429881Z  INFO run configuration steps=300 out="/tmp/gens_verify_package.json" filter=info
+2026-10-13T01:12:06.430083Z  INFO package built (scene validated at build time) bytes=1166
+2026-10-13T01:12:06.461252Z  INFO package run complete and clean entities=5 ticks=300 final_hash="5dbaff812612efc8"
+2026-10-13T01:12:06.461466Z  INFO package hello evidence written bytes=1212 path=/tmp/gens_verify_package.json
+package smoke: 1212 bytes of export-pipeline evidence
+==> [17/18] binary size gates (debug + release, ADR-0012 + ADR-0029)
+gpu_hello debug binary: 180076744 bytes (limit 367001600)
+RELEASE-GATE-SKIP: only 939872KB free (<3GB); the release tree cannot coexist with debug here.
+RELEASE-GATE-SKIP: CI enforces the 20 MiB release gate on every push (see ci.yml).
+==> [18/18] release manifest (gens-release-1 shape gate, Phase 10)
+2026-10-13T01:12:07.172641Z  INFO Gens engine - release manifest (gens-release-1)
+2026-10-13T01:12:07.172673Z  INFO run configuration out="/tmp/gens_release_manifest.json" filter=info
+2026-10-13T01:12:07.210287Z  INFO release manifest written and validated members=20 adrs=34 risks=35 tags=10 bytes=4240 path=/tmp/gens_release_manifest.json
+release manifest: 4240 bytes of release inventory evidence
+VERIFY: PASS
