@@ -1,0 +1,45 @@
+# Release v1.0.0 — CI run ledger + verification evidence
+
+Release: https://github.com/salim77007j/gens/releases/tag/v1.0.0
+Published: 2026-10-13T03:00:12Z · Latest (the /releases/latest endpoint resolves to v1.0.0)
+
+## Run ledger
+
+| Run | Workflow | Ref | Result | Note |
+|---|---|---|---|---|
+| #131 | CI | release-v1.0.0 (1bbd7a4) | success | branch gates: fmt/clippy/build/test/smokes on 3 OS |
+| #132 | CI | main merge (4951deb) | success | merge verified before tagging |
+| #1 | Release | tag v1.0.0 → 4951deb | **failure** | exactly one job red: `build / gens-release-1 manifest` — `Error: writing dist/gens-release-manifest.json / No such file or directory (os error 2)`; diagnosed from the job log; all other jobs green (linux zips, windows zips, example games) |
+| #133 | CI | release-hotfix-manifest | success | one-line fix: `mkdir -p dist` before the manifest write |
+| #134 | CI | main merge (1b581c4) | success | hotfix merge verified |
+| #2 | Release | tag v1.0.0 (re-pointed) → 1b581c4 | **success** | all 6 jobs green: build-linux, build-windows, games, manifest, release/publish, verify-windows |
+
+The tag was re-pointed after run #1's diagnosis (no release existed — publish had been skipped — and no consumer had the tag). Run #1 stays in the ledger on purpose.
+
+## verify-windows verdicts (run #2, real windows-latest runner, against the PUBLISHED assets)
+
+- sha256 checksums of the downloaded zips + example game: OK (`sha256sum --check --ignore-missing`)
+- zip integrity + bundled files present: gens-editor.exe, gens-player.exe, gens-pkg.exe, README.txt
+- **EDITOR-VERIFY-OK**: the published Windows editor rendered — `verify_editor.png: 193225 bytes` (a real 1600x900 editor composite through the runner's GPU adapter — the best-effort branch was NOT needed)
+- **PLAYER-VERIFY-OK**: the published Windows runtime ran the published example game clean (300 steps, gens-run-report-1 written, exit 0)
+- **PKG-VERIFY-OK**: every package hash re-checked on the Windows runner
+
+## Attached assets (all state=uploaded at publication)
+
+- gens-editor-windows-x86_64.zip — 7,151,310 bytes
+- gens-runtime-windows-x86_64.zip — 2,211,859 bytes
+- gens-editor-linux-x86_64.zip — 6,940,236 bytes
+- gens-runtime-linux-x86_64.zip — 2,469,234 bytes
+- hello-patrol.genspkg — 1,174 bytes
+- hello-sink.genspkg — 1,161 bytes
+- gens-release-manifest.json — 4,258 bytes
+- SHA256SUMS — 651 bytes
+
+## Independent download verification (release author, Linux sandbox)
+
+The Windows editor zip was downloaded back from the release and verified:
+`gens-editor-windows-x86_64.zip: OK` against the published SHA256SUMS;
+contents: gens-editor.exe (16,404,480 bytes) + README.txt (2,804 bytes).
+The sandbox cannot execute Windows PEs — the launch proof is run #2's
+verify-windows job, which is where a Windows user's first launch was
+already exercised.
