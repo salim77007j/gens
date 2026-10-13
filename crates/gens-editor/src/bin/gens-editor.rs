@@ -751,6 +751,13 @@ fn build_scene() -> (gens_ecs::ecs::world::World, PhysicsWorld) {
         ),
     );
     let level = spawn(&mut world, &mut names, "Level", Transform::IDENTITY);
+    // Terrain quad rotated FLAT — quads face +Z, so -90° about X lays it
+    // on the ground (the editor_hello reference scene documents the same
+    // convention). v1.1.0 used from_rotation_y here: a 30x30 WALL at
+    // x = 0 — invisible from the default camera (backface-culled) yet
+    // pickable from behind, so nearly every viewport ray hit it: "sky"
+    // drags silently grabbed an invisible wall and orbit was unreachable
+    // (EDITOR_REALITY_CHECK.md P0 #2/#3 tail).
     let terrain = spawn(
         &mut world,
         &mut names,
@@ -758,7 +765,7 @@ fn build_scene() -> (gens_ecs::ecs::world::World, PhysicsWorld) {
         (
             Transform {
                 position: Vec3::ZERO,
-                rotation: gens_math::Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2),
+                rotation: gens_math::Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
                 scale: vec3(30.0, 30.0, 1.0),
             },
             MeshSlot::quad([52, 60, 74, 255]),
