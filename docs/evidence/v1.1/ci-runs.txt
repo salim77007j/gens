@@ -1,0 +1,37 @@
+# v1.1 interactive window shell — CI evidence
+# Branch run: CI #38401028940 (head 676bc5e, branch v1.1-window-shell) — ALL GREEN
+# (docs integrity + ubuntu-latest + macos-latest + windows-latest)
+
+## Interactive window smoke verdicts (from the CI step logs, verbatim)
+
+### ubuntu-latest (xvfb + Mesa lavapipe software Vulkan)
+window smoke verdicts: {"ctrl_s_saved_scene": true, "pause_worked": true,
+"play_button_clicked": true, "play_started_simulation": true,
+"stop_restored_edit_mode": true, "viewport_drag_frames": 3}
+editor window smoke: 130532 bytes
+
+### macos-latest (Apple Silicon desktop, Metal)
+window smoke verdicts: {"ctrl_s_saved_scene": true, "pause_worked": true,
+"play_button_clicked": true, "play_started_simulation": true,
+"stop_restored_edit_mode": true, "viewport_drag_frames": 3}
+editor window smoke:   126307 bytes
+
+### windows-latest (Windows desktop session)
+window smoke verdicts: {"ctrl_s_saved_scene": true, "pause_worked": true,
+"play_button_clicked": true, "play_started_simulation": true,
+"stop_restored_edit_mode": true, "viewport_drag_frames": 3}
+editor window smoke: 131290 bytes
+
+## Reading
+Every OS opened a REAL OS window, presented ~126-131 KB of rendered frames,
+clicked the Play/Pause/Stop toolbar buttons through layout-captured rects,
+dragged the viewport through the real pointer path, and executed Ctrl+S as
+real key events writing scene.gensscene. The smoke JSON verdict assertions
+are hard gates on Linux/macOS (no skip path) and best-effort on Windows
+(ADR-0011 convention) — Windows chose to run and passed.
+
+## Local gates (push pre-flight)
+cargo fmt --all --check: clean
+cargo clippy --workspace --all-targets -- -D warnings: clean
+cargo test --workspace: 508 passed / 0 failed across 45 suites
+gens-release-1 manifest gate: members=20 adrs=36 risks=37 tags=11 (revalidated)
