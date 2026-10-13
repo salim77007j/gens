@@ -1,0 +1,208 @@
+{
+  "format": "gens-release-1",
+  "engine": {
+    "name": "gens",
+    "version": "0.1.0",
+    "license": "MIT OR Apache-2.0"
+  },
+  "toolchain": {
+    "channel": "rustc 1.99.0 (b940084d7 2026-09-28)",
+    "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1"
+  },
+  "environment": {
+    "os": "linux",
+    "arch": "x86_64",
+    "parallelism": 4
+  },
+  "git_commit": "4323e80e3a5ae69e489bf967adad6ba6d9b00039",
+  "members": [
+    {
+      "path": "crates/gens-core",
+      "name": "gens-core"
+    },
+    {
+      "path": "crates/gens-ecs",
+      "name": "gens-ecs"
+    },
+    {
+      "path": "crates/gens-math",
+      "name": "gens-math"
+    },
+    {
+      "path": "crates/gens-renderer",
+      "name": "gens-renderer"
+    },
+    {
+      "path": "crates/gens-physics",
+      "name": "gens-physics"
+    },
+    {
+      "path": "crates/gens-audio",
+      "name": "gens-audio"
+    },
+    {
+      "path": "crates/gens-input",
+      "name": "gens-input"
+    },
+    {
+      "path": "crates/gens-animation",
+      "name": "gens-animation"
+    },
+    {
+      "path": "crates/gens-ui",
+      "name": "gens-ui"
+    },
+    {
+      "path": "crates/gens-ai",
+      "name": "gens-ai"
+    },
+    {
+      "path": "crates/gens-scripting",
+      "name": "gens-scripting"
+    },
+    {
+      "path": "crates/gens-assets",
+      "name": "gens-assets"
+    },
+    {
+      "path": "crates/gens-networking",
+      "name": "gens-networking"
+    },
+    {
+      "path": "crates/gens-editor",
+      "name": "gens-editor"
+    },
+    {
+      "path": "crates/gens-runtime",
+      "name": "gens-runtime"
+    },
+    {
+      "path": "crates/gens-profiler",
+      "name": "gens-profiler"
+    },
+    {
+      "path": "crates/gens-build",
+      "name": "gens-build"
+    },
+    {
+      "path": "crates/gens-cinematics",
+      "name": "gens-cinematics"
+    },
+    {
+      "path": "crates/gens-worldgen",
+      "name": "gens-worldgen"
+    },
+    {
+      "path": "crates/gens-plugin",
+      "name": "gens-plugin"
+    }
+  ],
+  "adrs": 34,
+  "risk_ids": [
+    "R-001",
+    "R-002",
+    "R-003",
+    "R-004",
+    "R-005",
+    "R-006",
+    "R-007",
+    "R-008",
+    "R-009",
+    "R-010",
+    "R-011",
+    "R-012",
+    "R-013",
+    "R-014",
+    "R-015",
+    "R-016",
+    "R-017",
+    "R-018",
+    "R-019",
+    "R-020",
+    "R-021",
+    "R-022",
+    "R-023",
+    "R-024",
+    "R-025",
+    "R-026",
+    "R-027",
+    "R-028",
+    "R-029",
+    "R-030",
+    "R-031",
+    "R-032",
+    "R-033",
+    "R-034",
+    "R-035"
+  ],
+  "roadmap": [
+    {
+      "phase": 0,
+      "scope": "Risk management & safe development",
+      "status": "**Complete**"
+    },
+    {
+      "phase": 1,
+      "scope": "Workspace + core runtime + ECS + math",
+      "status": "**Complete**"
+    },
+    {
+      "phase": 2,
+      "scope": "Renderer (offscreen-first wgpu, GPU CI)",
+      "status": "**Complete**"
+    },
+    {
+      "phase": 3,
+      "scope": "Physics + audio + input",
+      "status": "**Complete**"
+    },
+    {
+      "phase": 4,
+      "scope": "Animation + UI + AI",
+      "status": "**Complete**"
+    },
+    {
+      "phase": 5,
+      "scope": "Scripting + assets + save",
+      "status": "**Complete**"
+    },
+    {
+      "phase": 6,
+      "scope": "Networking + data assets",
+      "status": "**Complete**"
+    },
+    {
+      "phase": 7,
+      "scope": "Visual editor",
+      "status": "**Complete**"
+    },
+    {
+      "phase": 8,
+      "scope": "Profiling + debugging + build pipeline",
+      "status": "**Complete**"
+    },
+    {
+      "phase": 9,
+      "scope": "Cinematics + world building + plugins",
+      "status": "**Complete**"
+    },
+    {
+      "phase": 10,
+      "scope": "Final testing + benchmarks + validation",
+      "status": "Pending"
+    }
+  ],
+  "format_tags": [
+    "gens-bench-1",
+    "gens-cine-1",
+    "gens-cinematic-1",
+    "gens-debug-1",
+    "gens-mem-1",
+    "gens-profile-1",
+    "gens-profile-hello-1",
+    "gens-release-1",
+    "gens-run-report-1",
+    "gens-worldgen-1"
+  ],
+  "advisory": "release inventory: describes THIS commit and environment; the roadmap status strings are the phases' own honest reports"
+}
