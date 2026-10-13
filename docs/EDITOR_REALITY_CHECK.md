@@ -187,3 +187,47 @@ All sessions are reproducible: `/home/z/testing/` contains `session.py` (Xvfb + 
 - Audio authoring/playback, gamepad input, localization, long-session memory leaks, multi-scene projects.
 - Godot export (requires one-time template download; not fetched in the sandbox) — the *dialog* path was inspected, the full export run was not.
 - Unity (see §5.3).
+
+---
+
+## 9. Fix pass (post-reality-check) — the five P0s, fixed and re-verified with the same user-simulation method
+
+**Approval:** the user approved fixing the catastrophic (P0) errors only. The P1 list (§1 items 6–13) and P2 polish (items 14–21) are **untouched** by this pass.
+
+**Method:** identical to the reality check — the release binary built from the fix branch, Xvfb 1920×1080 + userspace lavapipe, XTest-injected clicks/drags/keys, a full-screen screenshot after every step, object positions measured pixel-exactly (PIL) before clicking them. Evidence: `docs/reality-check/fixes/f*.png` (18 screenshots).
+
+### 9.1 What was actually broken (deeper than §6 hypothesized)
+
+- **P0 #1 (pick)** — the hypothesized "no ray-distance comparison" was wrong in detail, right in effect. `pick_at` DID compare distances, but converted local hit parameters to world distance by multiplying with `|L⁻¹·dir|`. The correct conversion is **1.0**: the world ray is `origin + dir·s` with unit `dir` and `L·(L⁻¹·dir) = dir` exactly, so the local parameter already IS the world distance. The bogus factor deflated scaled-up draws ~30× — the 30-unit "Terrain" outranked every object at any distance.
+- **The "giant 30×30 ground quad" was never a floor.** The shipped scene rotated it −90° about **Y**, standing a 30×30 **wall** in the x=0 plane — invisible from the default camera (backface-culled) yet pickable from behind (the exact pick ignores winding). Nearly every viewport ray crossed it. This is the deepest root cause of the "everything selects Terrain" experience and it also defeated orbit: after the pick fix, "sky" drags still silently grabbed the invisible wall (probed at four clear-band viewport spots — no camera change on any, because the pixels render sky but their rays hit the wall). The headless example's reference scene even documents the correct convention ("terrain quad rotated flat (quads face +Z; −90 degrees about X)"); the interactive bin picked the wrong axis.
+- **P0 #4 (undo)** — worse than reported: a probe confirmed bevy_ecs 0.20's `World::despawn` **cascades to descendants**, so deleting any parent destroyed the whole subtree while the undo payload held one row. The old unit test passed because its crate was a root entity — the shipped scene's crate is a child of Level.
+- **P0 #5 (physics)** — the Inspector's Physics section was always wired (Identity/Transform/Mesh/Physics Body/Collider); the scene spawned raw `PhysicsBody` handles **without the `AuthoredBody` description the section edits**, so it could never render, and a Play→Stop round-trip (which captures authored state) silently dropped every body — a second Play would have run without physics.
+
+### 9.2 The fixes (one commit each, on `fix/p0-catastrophic`)
+
+| Commit | Fixes | What changed |
+|---|---|---|
+| `0a270db` | P0 #1 (#2, #3 mechanics) | `pick_at` compares true world distances; regression tests: scale-2 cube pins t=9, the ground-behind-cube and marker-over-ground scenes pinned headless |
+| `806d2a0` | P0 #4 | `capture_subtree`/`respawn_subtree`: the delete payload is the whole doomed subtree (parents first); undo respawns into the LIVE world (existing body handles stay valid), re-parents to the live parent, reports missing parents instead of losing entities; regression tests for the child-of-Level case and the parent cascade case |
+| `44bb742` | P0 #5 | the scene's Spaceship/Crate bodies are authored through the same `body_spec_from_authored` path the restore uses, so Inspector ⇔ simulation ⇔ round-trip share one source of truth; bin tests pin the invariant |
+| `2a61ba3` | P0 #2/#3 tail | the scene's Terrain is a flat floor (rotation −90° about **X**), matching the example's documented convention |
+
+### 9.3 Re-verification — the same 17-item user loop, measured
+
+Every claim below references a committed screenshot and was produced by the synthetic-user rig, not by unit tests:
+
+1. **Pick**: click at the PIL-measured orange-crate centroid (776, 230) → hierarchy highlights Crate, gizmo moves, Inspector shows Crate at (1.00, 4.00, −1.00) with Physics (Dynamic, ball 0.45, friction 0.50) — `f10`, `f11`. The Spaceship pick shows Physics Body (Fixed) + Collider (half-extents 1.50/0.40/0.75, friction 0.60) — `f51`.
+2. **Drag**: drag the selected crate by (+150, +60) px → the CRATE moves to (3.94, 2.90, −2.28) (measured centroid Δ +145/+58 px), the floor stays intact — `f21`, `f22`. (In v1.1.0 this gesture moved the Terrain and left a void.)
+3. **Orbit**: drag in the sky band above the floor's horizon → camera readout yaw 35°→84°, pitch 30°→10°, scene visibly rotated — `f35_probe_base`, `f35_probe_topleft`. Three of four probe spots orbit; the fourth lands on the (now visible) floor and legitimately grabs it — the same rule as Godot (object drag beats orbit).
+4. **Undo of delete (the shipped failure)**: select Crate in hierarchy → `Del` (11→10 entities) → `Ctrl+Z` → the crate is BACK under Level with transform, mesh and body, 11 entities again, no console error — `f40`–`f42`. (v1.1.0: `ERROR … 'Level' is referenced as a parent but is not in the snapshot`, entity lost.)
+5. **Undo of a parent delete (the probe discovery)**: delete Level → Terrain/Spaceship/Crate vanish with it → `Ctrl+Z` → the whole subtree returns, correctly nested — `f43`–`f45`.
+6. **Play → Stop → Play**: the crate falls in the first play, Stop restores it to exactly its pre-play pixel (776, 230), the second play runs physics again (console: two "play mode entered" lines around "simulation stopped — pre-play state restored"; the crate is gone from its air position mid-second-play) — `f60`–`f63`. (The v1.1.0 round-trip dropped the bodies; a second play would have hung the crate in the air.)
+
+**Workspace state after the pass:** 515 tests passed / 0 failed / 9 ignored (GPU, CI-run), clippy clean, fmt clean — before the user-simulation pass, and re-run at commit time.
+
+### 9.4 What this pass does NOT claim
+
+- The **P1 authoring gaps stand**: still no New Scene/Export/Save-As, no light creation or editing, no script attach, three mesh shapes, no context menus, no native file dialogs, no project concept, no redo. §3's blocker table remains the roadmap; only blockers #1–#3 (and the physics half of #4's table row) are closed.
+- The verdict in §4 was written for v1.1.0-as-shipped and remains the honest assessment of editor usability until the P1 list moves: the core loop is now *sound* (select what you click, drag what you select, undo what you delete, physics you can see and round-trip), but a game still cannot be lit, scripted, or exported from the UI.
+- The DragValue UX, count inconsistencies, and stale copy (§1 items 15–19) are untouched.
+- macOS/Windows verification of the fixes is CI's smoke, not a user session (Linux-only sandbox).
