@@ -1065,6 +1065,7 @@ dependencies = [
 name = "gens-runtime"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bevy_ecs",
  "egui",
  "gens-ai",
