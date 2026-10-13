@@ -263,28 +263,20 @@ pub fn duplicate_selected(world: &mut World, state: &mut EditorState) -> Option<
     Some(new_name)
 }
 
-/// Edit > Delete Selected — captures the full authored snapshot FIRST
-/// (the undo payload), then despawns. Selection and drag state follow.
+/// Edit > Delete Selected — captures the full authored snapshot of the
+/// selected entity AND its descendants FIRST (bevy's despawn cascades
+/// the subtree, so the undo payload must carry every doomed row), then
+/// despawns. Selection and drag state follow.
 pub fn delete_selected(state: &mut EditorState, world: &mut World) {
     let Some(sel) = state.selected else {
         tracing::warn!("delete requested with no selection");
         return;
     };
-    // The undo payload is the entity's own row (parent link included).
-    let snapshot = playmode::capture(world)
-        .entities
-        .into_iter()
-        .find(|entity| {
-            entity.name.is_some()
-                && world
-                    .get::<Name>(sel)
-                    .map(|n| Some(n.0.clone()))
-                    .unwrap_or(None)
-                    == entity.name
-        });
-    if let Some(snapshot) = snapshot {
-        state.undo_stack.push(UndoOp::Delete { snapshot });
-    }
+    // The undo payload is the doomed subtree (the entity's own row +
+    // every descendant, parents first). Captured from the live entity —
+    // no by-name lookup that could grab the wrong row.
+    let snapshots = playmode::capture_subtree(world, sel);
+    state.undo_stack.push(UndoOp::Delete { snapshots });
     world.despawn(sel);
     state.selected = None;
     state.viewport_drag = None;
@@ -366,28 +358,25 @@ pub fn apply_undo(state: &mut EditorState, world: &mut World) {
                 tracing::warn!("undo: entity no longer exists (id {entity:?})");
             }
         }
-        UndoOp::Delete { snapshot } => {
-            let one = crate::playmode::WorldSnapshot {
-                entities: vec![snapshot],
-            };
-            match playmode::restore(world, &one) {
-                // The restored entity gets a NEW id; select it so the
-                // user sees what came back.
-                Ok(()) => {
-                    let restored = playmode::capture(world);
-                    state.selected = restored
-                        .entities
-                        .last()
-                        .and_then(|e| e.name.clone())
-                        .and_then(|name| {
-                            world.iter_entities().find_map(|r| {
-                                world
-                                    .get::<Name>(r.id())
-                                    .filter(|n| n.0 == name)
-                                    .map(|_| r.id())
-                            })
-                        });
-                    tracing::info!("undo: entity restored (new entity id)");
+        UndoOp::Delete { snapshots } => {
+            // Targeted respawn in the LIVE world — the full-world
+            // `restore` would despawn everything else. The root row is
+            // re-parented against the live world; descendants re-attach
+            // to the rows respawned with them.
+            match playmode::respawn_subtree(world, &snapshots) {
+                Ok((spawned, unresolved)) => {
+                    // The root comes back with a NEW id; select it so
+                    // the user sees what returned.
+                    state.selected = spawned.first().copied();
+                    for parent in unresolved {
+                        tracing::warn!(
+                            "undo: parent '{parent}' no longer exists — entity restored at root"
+                        );
+                    }
+                    tracing::info!(
+                        "undo: deleted entity restored ({} entities, new ids)",
+                        spawned.len()
+                    );
                 }
                 Err(e) => tracing::error!("undo/restore failed: {e}"),
             }
@@ -731,6 +720,119 @@ mod tests {
             "restored body sits at its authored position, got {position:?}"
         );
         assert_eq!(state.selected, Some(restored), "restoration is selected");
+    }
+
+    /// The EDITOR_REALITY_CHECK.md P0 #4 scenario, headless: the Crate
+    /// is a CHILD of Level (the shipped scene's structure — the old
+    /// unit test only covered a root-level Crate, which is why the bug
+    /// shipped). Delete then undo must restore it UNDER its parent.
+    #[test]
+    fn delete_then_undo_restores_a_child_under_its_parent() {
+        let (mut world, _) = physics_world_with_crate();
+        let mut state = EditorState::new();
+        let level = world.spawn((Name::new("Level"), Transform::IDENTITY)).id();
+        let crate_entity = world
+            .iter_entities()
+            .find(|e| world.get::<Name>(e.id()).map(|n| n.0.as_str()) == Some("Crate"))
+            .map(|e| e.id())
+            .unwrap();
+        gens_ecs::attach_children(&mut world, level, &[crate_entity]);
+
+        state.selected = Some(crate_entity);
+        delete_selected(&mut state, &mut world);
+        assert!(
+            world.iter_entities().all(|e| world
+                .get::<Name>(e.id())
+                .map(|n| n.0.as_str() != "Crate")
+                .unwrap_or(true)),
+            "the crate is gone after delete"
+        );
+        assert!(
+            world.get::<Name>(level).is_some(),
+            "the parent survives the child's delete"
+        );
+
+        apply_undo(&mut state, &mut world);
+        let restored = world
+            .iter_entities()
+            .find(|e| world.get::<Name>(e.id()).map(|n| n.0.as_str()) == Some("Crate"))
+            .map(|e| e.id())
+            .expect("the crate must come back — v1.1.0 lost it here with 'Level is not in the snapshot'");
+        let parent = world
+            .get::<gens_ecs::ecs::hierarchy::ChildOf>(restored)
+            .map(|c| c.parent())
+            .expect("restored crate is a child again");
+        assert_eq!(parent, level, "re-attached to the SAME live Level");
+        assert_eq!(state.selected, Some(restored), "restoration is selected");
+    }
+
+    /// bevy's despawn cascades to descendants (probe-verified), so
+    /// deleting a parent destroys the whole subtree. The undo payload
+    /// must carry every row — a single-row payload silently loses the
+    /// children.
+    #[test]
+    fn deleting_a_parent_then_undo_restores_the_whole_subtree() {
+        let (mut world, _) = physics_world_with_crate();
+        let mut state = EditorState::new();
+        let level = world.spawn((Name::new("Level"), Transform::IDENTITY)).id();
+        let terrain = world
+            .spawn((
+                Name::new("Terrain"),
+                Transform::IDENTITY.with_scale(gens_math::vec3(30.0, 30.0, 1.0)),
+            ))
+            .id();
+        let ship = world
+            .spawn((Name::new("Spaceship"), Transform::IDENTITY))
+            .id();
+        let crate_entity = world
+            .iter_entities()
+            .find(|e| world.get::<Name>(e.id()).map(|n| n.0.as_str()) == Some("Crate"))
+            .map(|e| e.id())
+            .unwrap();
+        gens_ecs::attach_children(&mut world, level, &[terrain, ship, crate_entity]);
+
+        state.selected = Some(level);
+        delete_selected(&mut state, &mut world);
+        let survivors = world
+            .iter_entities()
+            .filter(|e| {
+                world
+                    .get::<Name>(e.id())
+                    .map(|n| matches!(n.0.as_str(), "Level" | "Terrain" | "Spaceship" | "Crate"))
+                    .unwrap_or(false)
+            })
+            .count();
+        assert_eq!(survivors, 0, "the cascade removes the whole subtree");
+
+        apply_undo(&mut state, &mut world);
+        for (name, expected_children) in [
+            ("Level", 3usize),
+            ("Terrain", 0),
+            ("Spaceship", 0),
+            ("Crate", 0),
+        ] {
+            let entity = world
+                .iter_entities()
+                .find(|e| world.get::<Name>(e.id()).map(|n| n.0.as_str()) == Some(name))
+                .map(|e| e.id())
+                .unwrap_or_else(|| panic!("{name} restored"));
+            let child_count = world
+                .iter_entities()
+                .filter(|e| {
+                    world
+                        .get::<gens_ecs::ecs::hierarchy::ChildOf>(e.id())
+                        .map(|c| c.parent() == entity)
+                        .unwrap_or(false)
+                })
+                .count();
+            assert_eq!(child_count, expected_children, "{name}'s children");
+        }
+        let restored_level = world
+            .iter_entities()
+            .find(|e| world.get::<Name>(e.id()).map(|n| n.0.as_str()) == Some("Level"))
+            .map(|e| e.id())
+            .unwrap();
+        assert_eq!(state.selected, Some(restored_level));
     }
 
     #[test]

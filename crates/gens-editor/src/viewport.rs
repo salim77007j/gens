@@ -986,7 +986,11 @@ mod tests {
     /// is dead.
     fn assert_neq_terrain_guard(picked: Option<Entity>, cube: Entity) {
         assert!(picked.is_some(), "the ground plane must still pick");
-        assert_ne!(picked, Some(cube), "a ground-only point must not pick the cube");
+        assert_ne!(
+            picked,
+            Some(cube),
+            "a ground-only point must not pick the cube"
+        );
     }
 
     #[test]
