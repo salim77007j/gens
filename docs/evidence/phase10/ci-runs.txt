@@ -1,0 +1,12 @@
+Phase 10 CI run ledger (branch phase10-final-validation)
+
+#123  39d1285  P10-1  success  repo hygiene (697 plugin build artifacts untracked)
+#124  a7f2941  P10-2  success  gens-cine-1 document format (ADR-0033)
+#125  c1a3e05  P10-3  success  worldgen + cinematic bench scenario rows
+#126  2a936b1  P10-4  success  cross-pillar final integration suite
+#127  4323e80  P10-5  success  gens-release-1 manifest + verify gate 18 + CI step
+  jobs: gate/docs-integrity, ubuntu-latest, macos-latest, windows-latest — all success
+
+Every push ran the full 3-OS matrix (fmt, clippy -D warnings, build, test,
+9 headless smokes, release manifest, size gates). Main merge run recorded
+in docs/evidence/phase10/ after the phase merge.

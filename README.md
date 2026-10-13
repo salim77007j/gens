@@ -46,7 +46,7 @@ The workspace, dependency graph, and profiles are defined in Phase 1 (see `docs/
 | 7 | Visual editor | **Complete** | [`docs/PHASE_7_REPORT.md`](docs/PHASE_7_REPORT.md) |
 | 8 | Profiling + debugging + build pipeline | **Complete** | [`docs/PHASE_8_REPORT.md`](docs/PHASE_8_REPORT.md) |
 | 9 | Cinematics + world building + plugins | **Complete** | [`docs/PHASE_9_REPORT.md`](docs/PHASE_9_REPORT.md) |
-| 10 | Final testing + benchmarks + validation | Pending | — |
+| 10 | Final testing + benchmarks + validation | **Complete** | [`docs/PHASE_10_REPORT.md`](docs/PHASE_10_REPORT.md) |
 
 Each phase runs on its own branch (`phase<N>-<slug>`), is verified by CI, and lands on `main` only when its success criteria are met. `pre-phase<N>-safe` tags mark rollback anchors before each phase begins.
 

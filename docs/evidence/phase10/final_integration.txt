@@ -1,0 +1,9 @@
+Phase 10 cross-pillar integration — green in CI run #127 (ubuntu-latest job log excerpt)
+========================================================================================
+
+[1m[92m     Running[0m tests/final_integration.rs (target/debug/deps/final_integration-a5daf779a29c48cb)
+test checkpoint_time_is_exact_accumulated_f32 ... ok
+test cross_pillar_composition_replays_and_restores_byte_identically ... ok
+[1m[92m     Running[0m tests/final_integration.rs (target/debug/deps/final_integration-a5daf779a29c48cb)
+
+Workspace test totals (sum of all 'test result: ok' lines, ubuntu job #127): 489 passed; 0 failed

@@ -279,6 +279,17 @@ jobs:
           test -f smoke_bench.json
           echo "bench smoke evidence: $(wc -c < smoke_bench.json) bytes"
 
+      - name: Final validation manifest (gens-release-1, self-validating)
+        if: steps.detect.outputs.active == 'true'
+        shell: bash
+        run: |
+          # The manifest validates its own shape (crate set, ADR ledger,
+          # risk register, roadmap rows, wire-format inventory) and fails
+          # the run on any discrepancy - row 10 "validation".
+          cargo run -p gens-build --example release_manifest -- --out smoke_release_manifest.json
+          test -f smoke_release_manifest.json
+          echo "release manifest: $(wc -c < smoke_release_manifest.json) bytes"
+
       - name: Upload smoke artifacts
         if: steps.detect.outputs.active == 'true' && runner.os == 'Linux'
         uses: actions/upload-artifact@v4
@@ -299,6 +310,7 @@ jobs:
             smoke_plugin.json
             smoke_package.json
             smoke_bench.json
+            smoke_release_manifest.json
 
       - name: Binary size gates (debug + release)
         if: steps.detect.outputs.active == 'true'
